@@ -1,0 +1,223 @@
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景 -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:0.1"/>
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:0.2"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="3" dy="3" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <rect width="1200" height="800" fill="url(#bgGradient)"/>
+  
+  <!-- 标题 -->
+  <text x="600" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#1e40af">
+    蹦跳小火箭 V2.0 系统架构图
+  </text>
+  
+  <!-- 硬件层 -->
+  <g transform="translate(50, 80)">
+    <rect x="0" y="0" width="1100" height="120" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" filter="url(#shadow)"/>
+    <text x="20" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#92400e">硬件层 (Hardware Layer)</text>
+    
+    <!-- 传感器模块 -->
+    <g transform="translate(50, 40)">
+      <rect x="0" y="0" width="180" height="60" rx="8" fill="#ffffff" stroke="#f59e0b" stroke-width="1"/>
+      <text x="90" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#92400e">加速度传感器</text>
+      <text x="90" y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">跳跃识别</text>
+      <text x="90" y="48" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">动作检测</text>
+    </g>
+    
+    <!-- 显示模块 -->
+    <g transform="translate(280, 40)">
+      <rect x="0" y="0" width="180" height="60" rx="8" fill="#ffffff" stroke="#f59e0b" stroke-width="1"/>
+      <text x="90" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#92400e">OLED显示屏</text>
+      <text x="90" y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">游戏界面</text>
+      <text x="90" y="48" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">数据显示</text>
+    </g>
+    
+    <!-- 音频模块 -->
+    <g transform="translate(510, 40)">
+      <rect x="0" y="0" width="180" height="60" rx="8" fill="#ffffff" stroke="#f59e0b" stroke-width="1"/>
+      <text x="90" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#92400e">无源蜂鸣器</text>
+      <text x="90" y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">音效反馈</text>
+      <text x="90" y="48" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">背景音乐</text>
+    </g>
+    
+    <!-- 交互模块 -->
+    <g transform="translate(740, 40)">
+      <rect x="0" y="0" width="180" height="60" rx="8" fill="#ffffff" stroke="#f59e0b" stroke-width="1"/>
+      <text x="90" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#92400e">单功能按钮</text>
+      <text x="90" y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">短按/长按</text>
+      <text x="90" y="48" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">多功能控制</text>
+    </g>
+  </g>
+  
+  <!-- 驱动层 -->
+  <g transform="translate(50, 220)">
+    <rect x="0" y="0" width="1100" height="100" rx="10" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" filter="url(#shadow)"/>
+    <text x="20" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#1e40af">驱动层 (Driver Layer)</text>
+    
+    <!-- 各驱动模块 -->
+    <g transform="translate(80, 40)">
+      <rect x="0" y="0" width="150" height="40" rx="6" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+      <text x="75" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#1e40af">传感器驱动</text>
+      <text x="75" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#1e40af">数据采集</text>
+    </g>
+    
+    <g transform="translate(280, 40)">
+      <rect x="0" y="0" width="150" height="40" rx="6" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+      <text x="75" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#1e40af">显示驱动</text>
+      <text x="75" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#1e40af">图形渲染</text>
+    </g>
+    
+    <g transform="translate(480, 40)">
+      <rect x="0" y="0" width="150" height="40" rx="6" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+      <text x="75" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#1e40af">音频驱动</text>
+      <text x="75" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#1e40af">音效播放</text>
+    </g>
+    
+    <g transform="translate(680, 40)">
+      <rect x="0" y="0" width="150" height="40" rx="6" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+      <text x="75" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#1e40af">按键驱动</text>
+      <text x="75" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#1e40af">输入处理</text>
+    </g>
+    
+    <g transform="translate(880, 40)">
+      <rect x="0" y="0" width="150" height="40" rx="6" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+      <text x="75" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#1e40af">定时器驱动</text>
+      <text x="75" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#1e40af">时间管理</text>
+    </g>
+  </g>
+  
+  <!-- 应用层 -->
+  <g transform="translate(50, 340)">
+    <rect x="0" y="0" width="1100" height="180" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2" filter="url(#shadow)"/>
+    <text x="20" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#15803d">应用层 (Application Layer)</text>
+    
+    <!-- 核心模块 -->
+    <g transform="translate(50, 40)">
+      <rect x="0" y="0" width="200" height="120" rx="8" fill="#ffffff" stroke="#16a34a" stroke-width="2"/>
+      <text x="100" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#15803d">状态机控制器</text>
+      <text x="100" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 待机状态</text>
+      <text x="100" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 游戏中状态</text>
+      <text x="100" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 暂停状态</text>
+      <text x="100" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 重置确认状态</text>
+      <text x="100" y="100" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 结算状态</text>
+    </g>
+    
+    <g transform="translate(300, 40)">
+      <rect x="0" y="0" width="180" height="120" rx="8" fill="#ffffff" stroke="#16a34a" stroke-width="1"/>
+      <text x="90" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#15803d">跳跃检测模块</text>
+      <text x="90" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 加速度分析</text>
+      <text x="90" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 跳跃识别算法</text>
+      <text x="90" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 计数统计</text>
+      <text x="90" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 防抖处理</text>
+    </g>
+    
+    <g transform="translate(530, 40)">
+      <rect x="0" y="0" width="180" height="120" rx="8" fill="#ffffff" stroke="#16a34a" stroke-width="1"/>
+      <text x="90" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#15803d">游戏逻辑模块</text>
+      <text x="90" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 燃料计算</text>
+      <text x="90" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 进度更新</text>
+      <text x="90" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 分数计算</text>
+      <text x="90" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 发射评估</text>
+    </g>
+    
+    <g transform="translate(760, 40)">
+      <rect x="0" y="0" width="180" height="120" rx="8" fill="#ffffff" stroke="#16a34a" stroke-width="1"/>
+      <text x="90" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#15803d">反馈控制模块</text>
+      <text x="90" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 视觉反馈</text>
+      <text x="90" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 音效反馈</text>
+      <text x="90" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 动画播放</text>
+      <text x="90" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#15803d">• 界面更新</text>
+    </g>
+  </g>
+  
+  <!-- 用户交互层 -->
+  <g transform="translate(50, 540)">
+    <rect x="0" y="0" width="1100" height="100" rx="10" fill="#fce7f3" stroke="#ec4899" stroke-width="2" filter="url(#shadow)"/>
+    <text x="20" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#be185d">用户交互层 (User Interface Layer)</text>
+    
+    <g transform="translate(100, 40)">
+      <rect x="0" y="0" width="200" height="40" rx="6" fill="#ffffff" stroke="#ec4899" stroke-width="1"/>
+      <text x="100" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#be185d">游戏界面显示</text>
+      <text x="100" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#be185d">实时数据 + 进度条</text>
+    </g>
+    
+    <g transform="translate(350, 40)">
+      <rect x="0" y="0" width="200" height="40" rx="6" fill="#ffffff" stroke="#ec4899" stroke-width="1"/>
+      <text x="100" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#be185d">动画播放系统</text>
+      <text x="100" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#be185d">开机 + 火箭发射</text>
+    </g>
+    
+    <g transform="translate(600, 40)">
+      <rect x="0" y="0" width="200" height="40" rx="6" fill="#ffffff" stroke="#ec4899" stroke-width="1"/>
+      <text x="100" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#be185d">音效系统</text>
+      <text x="100" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#be185d">多种音效 + 背景音乐</text>
+    </g>
+    
+    <g transform="translate(850, 40)">
+      <rect x="0" y="0" width="180" height="40" rx="6" fill="#ffffff" stroke="#ec4899" stroke-width="1"/>
+      <text x="90" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#be185d">操作响应</text>
+      <text x="90" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#be185d">即时反馈</text>
+    </g>
+  </g>
+  
+  <!-- 数据流箭头 -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
+    </marker>
+  </defs>
+  
+  <!-- 上行数据流 -->
+  <line x1="200" y1="200" x2="200" y2="220" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="400" y1="200" x2="400" y2="220" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="600" y1="200" x2="600" y2="220" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="800" y1="200" x2="800" y2="220" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <line x1="200" y1="320" x2="200" y2="340" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="400" y1="320" x2="400" y2="340" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="600" y1="320" x2="600" y2="340" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="800" y1="320" x2="800" y2="340" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <line x1="400" y1="520" x2="400" y2="540" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="600" y1="520" x2="600" y2="540" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="800" y1="520" x2="800" y2="540" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 下行控制流 -->
+  <line x1="220" y1="540" x2="220" y2="520" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="420" y1="540" x2="420" y2="520" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="620" y1="540" x2="620" y2="520" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="820" y1="540" x2="820" y2="520" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <line x1="220" y1="340" x2="220" y2="320" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="420" y1="340" x2="420" y2="320" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="620" y1="340" x2="620" y2="320" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 图例 -->
+  <g transform="translate(50, 660)">
+    <rect x="0" y="0" width="300" height="100" rx="8" fill="#ffffff" stroke="#6b7280" stroke-width="1" filter="url(#shadow)"/>
+    <text x="150" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#374151">数据流向图例</text>
+    
+    <line x1="20" y1="40" x2="60" y2="40" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <text x="70" y="45" font-family="Arial, sans-serif" font-size="12" fill="#374151">数据上传流</text>
+    
+    <line x1="20" y1="60" x2="60" y2="60" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <text x="70" y="65" font-family="Arial, sans-serif" font-size="12" fill="#374151">控制下发流</text>
+    
+    <text x="20" y="85" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">分层架构确保系统模块化和可维护性</text>
+  </g>
+  
+  <!-- 火箭装饰图标 -->
+  <g transform="translate(1050, 660)">
+    <polygon points="25,10 35,40 15,40" fill="#ef4444"/>
+    <rect x="15" y="40" width="20" height="30" fill="#3b82f6"/>
+    <polygon points="10,70 15,80 35,80 40,70 35,70 15,70" fill="#f59e0b"/>
+    <circle cx="20" cy="55" r="3" fill="#ffffff"/>
+    <circle cx="30" cy="55" r="3" fill="#ffffff"/>
+  </g>
+</svg>

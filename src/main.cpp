@@ -43,6 +43,10 @@ void setup() {
     Serial.println("📊 初始化数据处理器...");
     data_processor_init();
 
+    // 初始化游戏数据
+    Serial.println("🎯 初始化游戏数据...");
+    game_data_init();
+
     Serial.println("🎮 准备启动游戏任务...");
     
     Serial.println("创建任务...");

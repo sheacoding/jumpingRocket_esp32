@@ -117,6 +117,17 @@ const uint8_t icon_trophy[] = {
     0x00   // 00000000
 };
 
+const uint8_t icon_gear[] = {
+    0x3C,  // 00111100 - 齿轮外圈
+    0x7E,  // 01111110 - 齿轮齿
+    0xFF,  // 11111111 - 齿轮齿
+    0xE7,  // 11100111 - 齿轮主体
+    0xE7,  // 11100111 - 齿轮中心
+    0xFF,  // 11111111 - 齿轮齿
+    0x7E,  // 01111110 - 齿轮齿
+    0x3C   // 00111100 - 齿轮外圈
+};
+
 // 16x16像素火箭图标定义（基于SVG设计精确重绘）
 const uint8_t icon_rocket_large[] = {
     // 第1-4行：尖锐三角形头部（基于SVG polygon points="0,-10 4,-2 -4,-2"）
@@ -1105,6 +1116,77 @@ void oled_display_idle_screen(void) {
     u8g2.sendBuffer();
 }
 
+// 难度选择界面显示（基于现有界面风格设计）
+void oled_display_difficulty_select_screen(void) {
+    if (!display_initialized) return;
+
+    u8g2.clearBuffer();
+
+    // 闪烁边框效果（与暂停界面类似）
+    uint32_t border_cycle = millis() % 1000; // 1秒周期
+    float border_t = border_cycle / 1000.0f;
+    float border_opacity = 0.3f + 0.7f * (0.5f + 0.5f * sin(border_t * 2 * PI)); // 0.3-1.0变化
+
+    if (svg_opacity_visible(border_opacity, 0)) {
+        // 绘制双重边框（放到屏幕最边缘）
+        u8g2.drawFrame(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        u8g2.drawFrame(1, 1, SCREEN_WIDTH-2, SCREEN_HEIGHT-2);
+    }
+
+    // 标题图标和文字（上移，为选项预留空间）
+    int gear_x = (SCREEN_WIDTH - 8) / 2;  // 8px图标居中
+    int gear_y = 10;  // 上移到10px
+    draw_icon(gear_x, gear_y, icon_gear);
+
+    u8g2.setFont(FONT_MEDIUM);
+    const char* title = "SELECT DIFFICULTY";
+    int title_width = u8g2.getStrWidth(title);
+    int title_x = (SCREEN_WIDTH - title_width) / 2;  // 精确居中
+    int title_y = 22;  // 标题位置22px
+    u8g2.drawStr(title_x, title_y, title);
+
+    // 三个难度选项的横向布局（选中项闪烁效果）
+    const char* difficulties[] = {"Easy", "Normal", "Hard"};
+    int option_y = 40;  // 选项统一Y位置
+    int total_width = SCREEN_WIDTH - 20;  // 可用宽度（左右各留10px边距）
+    int option_width = total_width / 3;   // 每个选项的宽度
+    int start_x = 10;  // 起始X位置
+
+    // 闪烁效果计算（与边框类似的闪烁周期）
+    uint32_t blink_cycle = millis() % 800; // 0.8秒周期
+    float blink_t = blink_cycle / 800.0f;
+    float blink_opacity = 0.3f + 0.7f * (0.5f + 0.5f * sin(blink_t * 2 * PI)); // 0.3-1.0变化
+
+    for (int i = 0; i < 3; i++) {
+        bool is_selected = (selected_difficulty == i);
+        const char* diff_name = difficulties[i];
+
+        // 计算每个选项的中心位置
+        int option_center_x = start_x + i * option_width + option_width / 2;
+
+        // 计算文字宽度以居中显示
+        u8g2.setFont(FONT_SMALL);
+        int text_width = u8g2.getStrWidth(diff_name);
+        int text_x = option_center_x - text_width / 2;
+
+        // 选中项的文字闪烁效果
+        if (is_selected) {
+            // 使用透明度控制文字闪烁显示
+            if (svg_opacity_visible(blink_opacity, 0)) {
+                // 绘制难度名称（选中时闪烁显示）
+                u8g2.drawStr(text_x, option_y, diff_name);
+            }
+        } else {
+            // 非选中项正常显示
+            u8g2.drawStr(text_x, option_y, diff_name);
+        }
+    }
+
+    // 移除底部操作提示，让界面更简洁
+
+    u8g2.sendBuffer();
+}
+
 // 显示任务
 void display_task(void* pvParameters) {
     Serial.println("🖥️  显示任务启动");
@@ -1141,6 +1223,10 @@ void display_task(void* pvParameters) {
         switch (current_state) {
             case GAME_STATE_IDLE:
                 oled_display_idle_screen();
+                break;
+
+            case GAME_STATE_DIFFICULTY_SELECT:
+                oled_display_difficulty_select_screen();
                 break;
 
             case GAME_STATE_PLAYING:

@@ -25,12 +25,20 @@
 // 游戏状态枚举
 typedef enum {
     GAME_STATE_IDLE,        // 待机状态
+    GAME_STATE_DIFFICULTY_SELECT, // 难度选择状态
     GAME_STATE_PLAYING,     // 游戏中
     GAME_STATE_PAUSED,      // 暂停状态
     GAME_STATE_RESET_CONFIRM, // 重置确认
     GAME_STATE_LAUNCHING,   // 火箭发射动画状态
     GAME_STATE_RESULT       // 结算状态
 } game_state_t;
+
+// 游戏难度枚举
+typedef enum {
+    DIFFICULTY_EASY,        // 简单模式 - 60%燃料触发
+    DIFFICULTY_NORMAL,      // 普通模式 - 80%燃料触发
+    DIFFICULTY_HARD         // 困难模式 - 100%燃料触发
+} game_difficulty_t;
 
 // 按钮事件枚举
 typedef enum {
@@ -48,7 +56,9 @@ typedef enum {
     SOUND_RESUME,           // 继续音效
     SOUND_RESET_WARNING,    // 重置警告
     SOUND_ROCKET_LAUNCH,    // 火箭发射
-    SOUND_VICTORY           // 胜利音效
+    SOUND_VICTORY,          // 胜利音效
+    SOUND_DIFFICULTY_SELECT, // 难度选择音效
+    SOUND_DIFFICULTY_CONFIRM // 难度确认音效
 } sound_type_t;
 
 // 游戏数据结构
@@ -59,6 +69,7 @@ typedef struct {
     uint32_t flight_height;     // 飞行高度(分数)
     bool is_jumping;            // 是否正在跳跃
     uint32_t last_jump_time;    // 上次跳跃时间
+    game_difficulty_t difficulty; // 当前游戏难度
 } game_data_t;
 
 // 传感器数据结构
@@ -74,6 +85,7 @@ typedef struct {
 extern game_state_t current_state;
 extern game_data_t game_data;
 extern sensor_data_t sensor_data;
+extern game_difficulty_t selected_difficulty; // 当前选中的难度
 
 // 函数声明 - 使用C++兼容的声明
 #ifdef __cplusplus
@@ -121,6 +133,7 @@ void start_rocket_launch_animation(void);
 void oled_display_boot_animation(void);
 void oled_display_rocket_launch_animation(void);
 void oled_display_idle_screen(void);
+void oled_display_difficulty_select_screen(void);
 void oled_display_game_screen(void);
 void oled_display_pause_screen(void);
 void oled_display_reset_confirm_screen(void);
@@ -137,6 +150,7 @@ button_event_t button_get_event(void);
 void button_task(void* pvParameters);
 
 // 游戏逻辑
+void game_data_init(void);
 void game_state_machine(void);
 void game_reset(void);
 void game_start(void);
@@ -145,6 +159,13 @@ void game_resume(void);
 void game_calculate_result(void);
 void game_update_data(void);
 void game_task(void* pvParameters);
+
+// 难度选择相关
+void difficulty_select_init(void);
+void difficulty_select_next(void);
+void difficulty_select_confirm(void);
+uint32_t get_difficulty_fuel_threshold(game_difficulty_t difficulty);
+const char* get_difficulty_name(game_difficulty_t difficulty);
 
 // 按钮事件处理
 void handle_button_event(button_event_t event);

@@ -254,21 +254,14 @@ void sensor_task(void* pvParameters) {
 
                     Serial.printf("🔍 待机状态跳跃检测: 第%lu次，需要连续2次明确跳跃才能启动游戏\n", idle_jump_count);
 
-                    // 需要连续2次明确的跳跃才能启动游戏
+                    // 需要连续2次明确的跳跃才能进入难度选择
                     if (idle_jump_count >= 2) {
-                        Serial.println("🚀 连续跳跃确认，启动游戏！");
-                        Serial.printf("   启动时间: %lu ms\n", millis());
-                        game_start();
+                        Serial.println("🚀 连续跳跃确认，进入难度选择界面！");
+                        Serial.printf("   触发时间: %lu ms\n", millis());
 
-                        // 第一次跳跃也要计数
-                        game_data.jump_count = 1;
-                        game_data.is_jumping = true;
-                        game_data.last_jump_time = millis();
-
-                        // 播放游戏开始音效
-                        play_sound_effect(SOUND_GAME_START);
-
-                        Serial.printf("   首次跳跃计数: %lu\n", game_data.jump_count);
+                        // 切换到难度选择状态
+                        current_state = GAME_STATE_DIFFICULTY_SELECT;
+                        difficulty_select_init();
 
                         // 重置待机跳跃计数
                         idle_jump_count = 0;

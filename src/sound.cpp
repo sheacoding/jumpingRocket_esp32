@@ -103,11 +103,26 @@ static void play_victory_sound(void) {
     Serial.println("音效: 胜利");
     int frequencies[] = {523, 523, 784, 784, 880, 880, 784, 698, 698, 659, 659, 587, 587, 523};
     int durations[] = {200, 200, 200, 200, 200, 200, 400, 200, 200, 200, 200, 200, 200, 400};
-    
+
     for (int i = 0; i < 14; i++) {
         buzzer_play_tone(frequencies[i], durations[i]);
         delay(50);
     }
+}
+
+// 难度选择音效
+static void play_difficulty_select_sound(void) {
+    Serial.println("音效: 难度选择");
+    buzzer_play_tone(440, 100); // A4
+    buzzer_play_tone(523, 100); // C5
+}
+
+// 难度确认音效
+static void play_difficulty_confirm_sound(void) {
+    Serial.println("音效: 难度确认");
+    buzzer_play_tone(523, 150); // C5
+    buzzer_play_tone(659, 150); // E5
+    buzzer_play_tone(784, 200); // G5
 }
 
 // 音效任务
@@ -161,7 +176,15 @@ void sound_task(void* pvParameters) {
                 case SOUND_VICTORY:
                     play_victory_sound();
                     break;
-                    
+
+                case SOUND_DIFFICULTY_SELECT:
+                    play_difficulty_select_sound();
+                    break;
+
+                case SOUND_DIFFICULTY_CONFIRM:
+                    play_difficulty_confirm_sound();
+                    break;
+
                 default:
                     Serial.printf("未知音效类型: %d\n", sound_type);
                     break;

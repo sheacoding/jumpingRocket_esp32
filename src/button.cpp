@@ -148,10 +148,22 @@ void handle_button_event(button_event_t event) {
 
     switch (current_state) {
         case GAME_STATE_IDLE:
-            // 待机状态下，需要更严格的验证才能开始游戏
+            // 待机状态下，按钮进入难度选择界面
             if (event == BUTTON_EVENT_SHORT_PRESS || event == BUTTON_EVENT_LONG_PRESS) {
-                Serial.println("🔘 按钮确认启动游戏");
-                game_start();
+                Serial.println("🔘 按钮触发，进入难度选择界面");
+                current_state = GAME_STATE_DIFFICULTY_SELECT;
+                difficulty_select_init();
+            }
+            break;
+
+        case GAME_STATE_DIFFICULTY_SELECT:
+            // 难度选择状态下的按钮处理
+            if (event == BUTTON_EVENT_SHORT_PRESS) {
+                // 短按切换难度
+                difficulty_select_next();
+            } else if (event == BUTTON_EVENT_LONG_PRESS) {
+                // 长按确认难度并开始游戏
+                difficulty_select_confirm();
             }
             break;
             

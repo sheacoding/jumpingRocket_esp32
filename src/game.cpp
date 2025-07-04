@@ -4,6 +4,16 @@
 game_state_t current_state = GAME_STATE_IDLE;
 game_data_t game_data = {0};
 
+// 难度选择相关变量
+game_difficulty_t selected_difficulty = DIFFICULTY_NORMAL; // 默认普通难度
+
+// 游戏数据初始化函数
+void game_data_init(void) {
+    memset(&game_data, 0, sizeof(game_data_t));
+    game_data.difficulty = DIFFICULTY_NORMAL; // 设置默认难度
+    Serial.printf("游戏数据初始化，默认难度: %s\n", get_difficulty_name(game_data.difficulty));
+}
+
 // 游戏计时器
 static uint32_t game_start_time = 0;
 static uint32_t pause_start_time = 0;
@@ -27,19 +37,25 @@ uint32_t get_time_ms(void) {
 // 游戏重置
 void game_reset(void) {
     Serial.println("重置游戏");
-    
+
+    // 保存当前难度设置
+    game_difficulty_t current_difficulty = game_data.difficulty;
+
     // 重置游戏数据
     memset(&game_data, 0, sizeof(game_data_t));
-    
+
+    // 恢复难度设置（重置后保持用户选择的难度）
+    game_data.difficulty = current_difficulty;
+
     // 重置计时器
     game_start_time = 0;
     pause_start_time = 0;
     total_pause_time = 0;
-    
+
     // 切换到待机状态
     current_state = GAME_STATE_IDLE;
-    
-    Serial.println("游戏重置完成");
+
+    Serial.printf("游戏重置完成，保持难度: %s\n", get_difficulty_name(game_data.difficulty));
 }
 
 // 游戏开始
@@ -49,10 +65,12 @@ void game_start(void) {
     // 记录精确的开始时间
     uint32_t current_time = get_time_ms();
 
-    // 重置游戏数据（但保留可能已有的跳跃计数）
-    uint32_t existing_jumps = game_data.jump_count;
+    // 重置游戏数据（完全重置，只保留难度设置）
+    game_difficulty_t existing_difficulty = game_data.difficulty;
     memset(&game_data, 0, sizeof(game_data_t));
-    game_data.jump_count = existing_jumps; // 恢复跳跃计数
+    game_data.difficulty = existing_difficulty; // 恢复难度设置
+
+    Serial.printf("   游戏数据完全重置，难度: %s\n", get_difficulty_name(existing_difficulty));
 
     // 设置开始时间
     game_start_time = current_time;
@@ -184,9 +202,22 @@ void game_update_data(void) {
 
 // 检查是否应该启动火箭发射
 bool should_start_rocket_launch(void) {
-    // 条件1: 燃料满格（达到100%）
-    if (game_data.fuel_progress >= MAX_FUEL) {
-        Serial.println("燃料满格，启动火箭发射动画");
+    // 获取当前难度的燃料阈值
+    uint32_t fuel_threshold = get_difficulty_fuel_threshold(game_data.difficulty);
+
+    // 调试输出当前难度信息（每次检查时输出）
+    static uint32_t last_debug_time = 0;
+    uint32_t current_time = millis();
+    if (current_time - last_debug_time > 3000) { // 每3秒输出一次
+        Serial.printf("🎯 难度检查: 当前难度=%s, 燃料阈值=%lu%%, 当前燃料=%lu%%\n",
+                     get_difficulty_name(game_data.difficulty), fuel_threshold, game_data.fuel_progress);
+        last_debug_time = current_time;
+    }
+
+    // 条件1: 燃料达到难度阈值
+    if (game_data.fuel_progress >= fuel_threshold) {
+        Serial.printf("🚀 燃料达到%s模式阈值(%lu%%)，启动火箭发射动画\n",
+                     get_difficulty_name(game_data.difficulty), fuel_threshold);
         return true;
     }
 
@@ -219,6 +250,10 @@ void game_state_machine(void) {
     switch (current_state) {
         case GAME_STATE_IDLE:
             // 待机状态，等待用户操作或跳跃启动
+            break;
+
+        case GAME_STATE_DIFFICULTY_SELECT:
+            // 难度选择状态，等待用户选择难度
             break;
 
         case GAME_STATE_PLAYING:
@@ -290,5 +325,79 @@ void game_task(void* pvParameters) {
         
         // 任务延时
         delay(50); // 20Hz更新频率
+    }
+}
+
+// ==================== 难度选择相关函数 ====================
+
+// 初始化难度选择
+void difficulty_select_init(void) {
+    selected_difficulty = DIFFICULTY_NORMAL; // 默认选择普通难度
+    Serial.println("🎯 进入难度选择界面");
+    Serial.printf("   默认难度: %s\n", get_difficulty_name(selected_difficulty));
+}
+
+// 切换到下一个难度
+void difficulty_select_next(void) {
+    switch (selected_difficulty) {
+        case DIFFICULTY_EASY:
+            selected_difficulty = DIFFICULTY_NORMAL;
+            break;
+        case DIFFICULTY_NORMAL:
+            selected_difficulty = DIFFICULTY_HARD;
+            break;
+        case DIFFICULTY_HARD:
+            selected_difficulty = DIFFICULTY_EASY;
+            break;
+    }
+
+    Serial.printf("🎯 难度切换: %s (燃料阈值: %lu%%)\n",
+                 get_difficulty_name(selected_difficulty),
+                 get_difficulty_fuel_threshold(selected_difficulty));
+
+    // 播放选择音效
+    play_sound_effect(SOUND_DIFFICULTY_SELECT);
+}
+
+// 确认难度选择并开始游戏
+void difficulty_select_confirm(void) {
+    Serial.printf("🎯 确认难度: %s\n", get_difficulty_name(selected_difficulty));
+    Serial.printf("   燃料发射阈值: %lu%%\n", get_difficulty_fuel_threshold(selected_difficulty));
+
+    // 保存难度到游戏数据
+    game_data.difficulty = selected_difficulty;
+
+    // 播放确认音效
+    play_sound_effect(SOUND_DIFFICULTY_CONFIRM);
+
+    // 开始游戏
+    game_start();
+}
+
+// 获取难度对应的燃料阈值
+uint32_t get_difficulty_fuel_threshold(game_difficulty_t difficulty) {
+    switch (difficulty) {
+        case DIFFICULTY_EASY:
+            return 60;  // 简单模式：60%燃料触发
+        case DIFFICULTY_NORMAL:
+            return 80;  // 普通模式：80%燃料触发
+        case DIFFICULTY_HARD:
+            return 100; // 困难模式：100%燃料触发
+        default:
+            return 80;  // 默认普通模式
+    }
+}
+
+// 获取难度名称
+const char* get_difficulty_name(game_difficulty_t difficulty) {
+    switch (difficulty) {
+        case DIFFICULTY_EASY:
+            return "Easy";
+        case DIFFICULTY_NORMAL:
+            return "Normal";
+        case DIFFICULTY_HARD:
+            return "Hard";
+        default:
+            return "Normal";
     }
 }

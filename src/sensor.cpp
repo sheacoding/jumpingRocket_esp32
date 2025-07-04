@@ -3,12 +3,12 @@
 // Adafruit MPU6050对象
 Adafruit_MPU6050 mpu;
 
-// 跳跃检测参数（恢复原始值）
-#define JUMP_THRESHOLD_HIGH     1.3f    // 跳跃检测高阈值(g) - 降低以提高灵敏度
-#define JUMP_THRESHOLD_LOW      0.7f    // 跳跃检测低阈值(g) - 提高以减少误触
-#define JUMP_MIN_DURATION       50      // 最小跳跃持续时间(ms) - 缩短
-#define JUMP_MAX_DURATION       1500    // 最大跳跃持续时间(ms) - 缩短
-#define JUMP_COOLDOWN           200     // 跳跃冷却时间(ms) - 缩短
+// 跳跃检测参数（平衡灵敏度和稳定性）
+#define JUMP_THRESHOLD_HIGH     1.5f    // 跳跃检测高阈值(g) - 适中的灵敏度
+#define JUMP_THRESHOLD_LOW      0.8f    // 跳跃检测低阈值(g) - 确保能检测到着地
+#define JUMP_MIN_DURATION       80      // 最小跳跃持续时间(ms) - 过滤短暂噪声
+#define JUMP_MAX_DURATION       1500    // 最大跳跃持续时间(ms)
+#define JUMP_COOLDOWN           250     // 跳跃冷却时间(ms) - 适中的冷却时间
 
 // 滤波器参数
 #define FILTER_ALPHA            0.7f    // 低通滤波器系数 - 调整响应性
@@ -236,21 +236,45 @@ void sensor_task(void* pvParameters) {
 
             // 如果检测到跳跃
             if (jump_detected) {
-                // 如果在待机状态，跳跃启动游戏
+                // 如果在待机状态，需要更严格的条件才能启动游戏
                 if (current_state == GAME_STATE_IDLE) {
-                    Serial.println("🚀 跳跃启动游戏！");
-                    Serial.printf("   启动时间: %lu ms\n", millis());
-                    game_start();
+                    // 增加额外验证：需要连续的明显跳跃动作
+                    static uint32_t idle_jump_count = 0;
+                    static uint32_t last_idle_jump_time = 0;
 
-                    // 第一次跳跃也要计数
-                    game_data.jump_count = 1;
-                    game_data.is_jumping = true;
-                    game_data.last_jump_time = millis();
+                    uint32_t current_time = millis();
 
-                    // 播放游戏开始音效
-                    play_sound_effect(SOUND_GAME_START);
+                    // 如果距离上次跳跃超过2秒，重置计数
+                    if (current_time - last_idle_jump_time > 2000) {
+                        idle_jump_count = 0;
+                    }
 
-                    Serial.printf("   首次跳跃计数: %lu\n", game_data.jump_count);
+                    idle_jump_count++;
+                    last_idle_jump_time = current_time;
+
+                    Serial.printf("🔍 待机状态跳跃检测: 第%lu次，需要连续2次明确跳跃才能启动游戏\n", idle_jump_count);
+
+                    // 需要连续2次明确的跳跃才能启动游戏
+                    if (idle_jump_count >= 2) {
+                        Serial.println("🚀 连续跳跃确认，启动游戏！");
+                        Serial.printf("   启动时间: %lu ms\n", millis());
+                        game_start();
+
+                        // 第一次跳跃也要计数
+                        game_data.jump_count = 1;
+                        game_data.is_jumping = true;
+                        game_data.last_jump_time = millis();
+
+                        // 播放游戏开始音效
+                        play_sound_effect(SOUND_GAME_START);
+
+                        Serial.printf("   首次跳跃计数: %lu\n", game_data.jump_count);
+
+                        // 重置待机跳跃计数
+                        idle_jump_count = 0;
+                    } else {
+                        Serial.printf("   等待更多跳跃确认 (%lu/2)\n", idle_jump_count);
+                    }
                 }
                 // 如果游戏正在进行，更新跳跃计数
                 else if (current_state == GAME_STATE_PLAYING) {

@@ -77,10 +77,10 @@ bool buzzer_init(void) {
     return true;
 }
 
-// 按钮初始化
+// 按钮初始化（修正为高电平触发按钮）
 bool button_init(void) {
-    pinMode(BUTTON_PIN, INPUT_PULLUP);
-    Serial.println("按钮初始化成功");
+    pinMode(BUTTON_PIN, INPUT_PULLDOWN);  // 改为下拉电阻，默认低电平
+    Serial.println("按钮初始化成功（高电平触发模式）");
     return true;
 }
 

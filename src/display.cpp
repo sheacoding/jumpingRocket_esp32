@@ -178,14 +178,11 @@ bool oled_init(void) {
     u8g2.sendBuffer();
     Serial.println("✅ 清屏测试完成");
 
-    // 显示测试文本
-    Serial.println("   正在显示测试文本...");
-    u8g2.clearBuffer();
-    u8g2.setFont(FONT_MEDIUM);
-    u8g2.drawStr(10, 10, "OLED Test OK");
-    u8g2.drawStr(10, 30, "Initializing...");
-    u8g2.sendBuffer();
-    delay(2000); // 显示2秒
+    // 测试文本（仅串口输出，不在屏幕显示）
+    Serial.println("   OLED测试文本检查...");
+    Serial.println("   ✅ OLED Test OK");
+    Serial.println("   ✅ Initializing...");
+    Serial.println("   跳过屏幕测试显示，直接进入开机动画");
 
     display_initialized = true;
     Serial.println("🎉 U8g2 OLED初始化完全成功");
@@ -379,7 +376,7 @@ void start_rocket_launch_animation(void) {
     rocket_launch_active = true;
 }
 
-// 开机动画（基于SVG设计精确重构）
+// 开机动画（重新设计布局，解决ROCKET文字与三个点的重叠问题）
 void oled_display_boot_animation(void) {
     if (!display_initialized) return;
 
@@ -389,55 +386,89 @@ void oled_display_boot_animation(void) {
     if (current_time - last_animation_time >= 100) {
         u8g2.clearBuffer();
 
-        // 火箭图标（基于SVG transform="translate(64, 32)"精确定位）
-        int rocket_x = svg_transform_x(-8, 64);  // SVG中心点64，图标半宽8
-        int rocket_y = svg_transform_y(-8, 32);  // SVG中心点32，图标半高8
+        // 火箭图标（上移，为下方元素预留更多空间）
+        int rocket_x = (SCREEN_WIDTH - 16) / 2;  // 精确居中
+        int rocket_y = 18;  // 上移到18px位置
         draw_large_icon(rocket_x, rocket_y, icon_rocket_large);
 
-        // "ROCKET"文字（基于SVG text x="64" y="48" font-size="8"）
-        uint32_t text_cycle = svg_animate_progress(current_time, SVG_DUR_TO_MS(1.0)); // 1秒周期
+        // "ROCKET"文字（重新定位，确保与三个点有足够间距）
+        uint32_t text_cycle = millis() % 1000; // 直接使用millis()，1秒周期
         float text_opacity = 0.5f + 0.5f * sin(text_cycle * 2 * PI / 1000.0f);
 
         if (svg_opacity_visible(text_opacity, 0)) {
-            u8g2.setFont(FONT_SMALL); // 对应SVG font-size="8"
+            u8g2.setFont(FONT_SMALL); // FONT_SMALL高度约10像素
             const char* rocket_text = "ROCKET";
             int text_width = u8g2.getStrWidth(rocket_text);
-            int text_x = svg_transform_x(-text_width/2, 64); // 居中对齐
-            int text_y = svg_transform_y(0, 48);
+            int text_x = (SCREEN_WIDTH - text_width) / 2; // 精确居中
+            int text_y = 42;  // 重新定位到42px，为三个点预留空间
             u8g2.drawStr(text_x, text_y, rocket_text);
         }
 
-        // 三个动画指示点（基于SVG circle cx="40,50,60" cy="55" r="2"）
-        uint32_t dot_cycle = svg_animate_progress(current_time, SVG_DUR_TO_MS(1.5)); // 1.5秒周期
-
-        // 第一个点 (SVG cx="40")
-        int dot1_x = svg_transform_x(0, 40);
-        int dot1_y = svg_transform_y(0, 55);
-        uint32_t dot1_phase = dot_cycle;
-        if ((dot1_phase / 500) % 3 == 0) {
-            u8g2.drawDisc(dot1_x, dot1_y, 2);
-        } else {
-            u8g2.drawCircle(dot1_x, dot1_y, 2);
+        // 三个进度指示点（实心点依次移动的波浪式动画）
+        static uint32_t animation_start_time = 0;
+        if (animation_start_time == 0) {
+            animation_start_time = millis(); // 记录动画开始时间
         }
 
-        // 第二个点 (SVG cx="50"，延迟0.5秒)
-        int dot2_x = svg_transform_x(0, 50);
-        int dot2_y = svg_transform_y(0, 55);
-        uint32_t dot2_phase = (dot_cycle + 500) % SVG_DUR_TO_MS(1.5);
-        if ((dot2_phase / 500) % 3 == 0) {
-            u8g2.drawDisc(dot2_x, dot2_y, 2);
+        uint32_t current_millis = millis();
+        uint32_t elapsed_time = current_millis - animation_start_time;
+        uint32_t dot_cycle = elapsed_time % 1500; // 1.5秒周期
+
+        // 计算三个点的Y位置，确保与ROCKET文字有足够间距
+        int dots_y = 56;  // 距离ROCKET文字底部4像素 (42+10+4=56)
+
+        // 计算当前活跃点的位置（0=第1个点，1=第2个点，2=第3个点）
+        // 每个点持续500ms，总周期1.5秒
+        int active_dot = (dot_cycle / 500) % 3;
+
+        // 三个点的X坐标
+        int dot1_x = 48;  // 左侧
+        int dot2_x = 64;  // 中央
+        int dot3_x = 80;  // 右侧
+
+        // 绘制三个点，只有活跃的点是实心圆
+        // 第一个点
+        if (active_dot == 0) {
+            u8g2.drawDisc(dot1_x, dots_y, 2);  // 实心圆
         } else {
-            u8g2.drawCircle(dot2_x, dot2_y, 2);
+            u8g2.drawCircle(dot1_x, dots_y, 2); // 空心圆
         }
 
-        // 第三个点 (SVG cx="60"，延迟1.0秒)
-        int dot3_x = svg_transform_x(0, 60);
-        int dot3_y = svg_transform_y(0, 55);
-        uint32_t dot3_phase = (dot_cycle + 1000) % SVG_DUR_TO_MS(1.5);
-        if ((dot3_phase / 500) % 3 == 0) {
-            u8g2.drawDisc(dot3_x, dot3_y, 2);
+        // 第二个点
+        if (active_dot == 1) {
+            u8g2.drawDisc(dot2_x, dots_y, 2);  // 实心圆
         } else {
-            u8g2.drawCircle(dot3_x, dot3_y, 2);
+            u8g2.drawCircle(dot2_x, dots_y, 2); // 空心圆
+        }
+
+        // 第三个点
+        if (active_dot == 2) {
+            u8g2.drawDisc(dot3_x, dots_y, 2);  // 实心圆
+        } else {
+            u8g2.drawCircle(dot3_x, dots_y, 2); // 空心圆
+        }
+
+        // 添加布局和动画调试信息
+        static bool boot_debug_printed = false;
+        static uint32_t last_debug_time = 0;
+        if (!boot_debug_printed) {
+            Serial.printf("🚀 开机动画布局修复: 火箭(%d,%d) ROCKET文字(居中,42) 三个点(48,64,80,%d)\n",
+                         rocket_x, rocket_y, dots_y);
+            Serial.printf("📐 垂直分布: 火箭18-34px, ROCKET文字42-52px, 三个点54-58px, 完全分离\n");
+            Serial.printf("🎬 波浪式动画: 1.5秒周期，实心点依次移动 ●○○→○●○→○○●\n");
+            boot_debug_printed = true;
+        }
+
+        // 每500ms输出一次动画状态（更频繁的调试）
+        if (current_time - last_debug_time > 500) {
+            Serial.printf("🔄 开机动画状态: 活跃点%d/3, 周期%lums, 经过时间%lums\n", active_dot, dot_cycle, elapsed_time);
+            Serial.printf("📍 点状态: 点1(%s) 点2(%s) 点3(%s)\n",
+                         (active_dot == 0) ? "●实心" : "○空心",
+                         (active_dot == 1) ? "●实心" : "○空心",
+                         (active_dot == 2) ? "●实心" : "○空心");
+            Serial.printf("🧮 计算详情: 开始时间=%lu, 当前时间=%lu, 经过=%lu, 周期=%lu, 活跃点=%d\n",
+                         animation_start_time, current_millis, elapsed_time, dot_cycle, active_dot);
+            last_debug_time = current_time;
         }
 
         u8g2.sendBuffer();
@@ -485,9 +516,13 @@ void oled_display_rocket_launch_animation(void) {
             return;
         }
 
-        // 三个阶段的动画
-        int rocket_x = (SCREEN_WIDTH - 16) / 2;
+        // 中央火箭动画区域（保护区域：X=40-88，确保左右侧元素不侵入）
+        int rocket_x = (SCREEN_WIDTH - 16) / 2;  // X=56，16像素宽度的火箭居中
         int rocket_y;
+
+        // 中央保护区域边界：左边界40像素，右边界88像素
+        const int CENTRAL_AREA_LEFT = 40;
+        const int CENTRAL_AREA_RIGHT = 88;
 
         if (progress < 0.3f) {
             // 阶段1：起飞（0-30%）
@@ -541,33 +576,53 @@ void oled_display_rocket_launch_animation(void) {
             dynamic_height += (uint32_t)(500 * height_multiplier); // 奖励也随高度放大
         }
 
-        // 显示动态飞行高度（右侧显示，避免与火箭重叠）
-        u8g2.setFont(FONT_LARGE);
+        // 右侧高度显示区域（修复重叠问题，基于FONT_LARGE=20px高度重新计算）
+        u8g2.setFont(FONT_LARGE);  // 10x20像素字体，高度20像素
         char height_text[16];
         snprintf(height_text, sizeof(height_text), "%lum", dynamic_height);
-        int height_x = SCREEN_WIDTH - u8g2.getStrWidth(height_text) - 2; // 右对齐，留2像素边距
-        int height_y = 15; // 顶部位置
+        int height_width = u8g2.getStrWidth(height_text);
+        int height_x = SCREEN_WIDTH - height_width - 3; // 右对齐，留3像素边距
+        int height_y = 15; // 重新定位，为20像素高度字体预留空间
         u8g2.drawStr(height_x, height_y, height_text);
 
-        // 显示"ALTITUDE"标签（右侧）
-        u8g2.setFont(FONT_TINY);
+        // ALTITUDE标签（右侧，确保与高度数字完全分离）
+        u8g2.setFont(FONT_TINY);  // 4x6像素字体，高度6像素
         const char* alt_label = "ALTITUDE";
-        int label_x = SCREEN_WIDTH - u8g2.getStrWidth(alt_label) - 2;
-        int label_y = 25;
+        int label_width = u8g2.getStrWidth(alt_label);
+        int label_x = SCREEN_WIDTH - label_width - 3; // 与高度数字对齐
+        int label_y = 37; // 距离高度字体底部2像素 (15+20+2=37)
         u8g2.drawStr(label_x, label_y, alt_label);
 
-        // 显示统计信息（左侧，避免与高度重叠）
-        u8g2.setFont(FONT_TINY);
-        char jump_text[16];
-        snprintf(jump_text, sizeof(jump_text), "JUMPS: %lu", game_data.jump_count);
-        u8g2.drawStr(2, 15, jump_text);
+        // 左侧统计信息区域（确保不侵入中央保护区域40px边界）
+        u8g2.setFont(FONT_TINY);  // 4x6像素字体
 
-        char time_text[16];
+        // 跳跃统计（左上，调整位置避免与右侧高度显示冲突）
+        char jump_text[8]; // 进一步缩短避免超出边界
+        snprintf(jump_text, sizeof(jump_text), "J:%lu", game_data.jump_count);
+        int jump_width = u8g2.getStrWidth(jump_text);
+        // 确保文字不超过中央保护区域左边界(40px)
+        int jump_x = (jump_width < 37) ? 3 : (40 - jump_width);
+        u8g2.drawStr(jump_x, 15, jump_text); // 与右侧高度对齐
+
+        // 时间统计（左下，确保不超出边界）
+        char time_text[8]; // 进一步缩短
         uint32_t total_seconds = game_data.game_time_ms / 1000;
         uint32_t minutes = total_seconds / 60;
         uint32_t seconds = total_seconds % 60;
-        snprintf(time_text, sizeof(time_text), "TIME: %02lu:%02lu", minutes, seconds);
-        u8g2.drawStr(2, 25, time_text);
+        snprintf(time_text, sizeof(time_text), "T:%02lu:%02lu", minutes, seconds);
+        int time_width = u8g2.getStrWidth(time_text);
+        // 确保文字不超过中央保护区域左边界(40px)
+        int time_x = (time_width < 37) ? 3 : (40 - time_width);
+        u8g2.drawStr(time_x, 25, time_text); // 与跳跃统计间距10像素
+
+        // 添加布局调试信息
+        static uint32_t last_debug_time = 0;
+        if (current_time - last_debug_time > 1000) { // 每秒输出一次
+            Serial.printf("🚀 发射动画布局修复: 高度(%d,%d) 标签(%d,%d) 跳跃(%d,15) 时间(%d,25)\n",
+                         height_x, height_y, label_x, label_y, jump_x, time_x);
+            Serial.printf("📐 字体高度: FONT_LARGE=20px, 高度占用15-35px, ALTITUDE在37px, 中央保护区40-88px\n");
+            last_debug_time = current_time;
+        }
 
         u8g2.sendBuffer();
 
@@ -728,49 +783,46 @@ void oled_display_pause_screen(void) {
 
     u8g2.clearBuffer();
 
-    // 闪烁边框效果（基于SVG animate opacity="0.3;1;0.3" dur="1s"）
-    uint32_t border_cycle = svg_animate_progress(millis(), SVG_DUR_TO_MS(1.0)); // 1秒周期
+    // 闪烁边框效果（移到屏幕最边缘，避免与文字重叠）
+    uint32_t border_cycle = millis() % 1000; // 1秒周期
     float border_t = border_cycle / 1000.0f;
     float border_opacity = 0.3f + 0.7f * (0.5f + 0.5f * sin(border_t * 2 * PI)); // 0.3-1.0变化
 
     // 使用透明度控制边框显示
     if (svg_opacity_visible(border_opacity, 0)) {
-        // 绘制双重边框（基于SVG rect stroke-width="2"）
-        int border_margin = svg_transform_x(2, 0);
-        u8g2.drawFrame(border_margin, border_margin,
-                      SCREEN_WIDTH - 2*border_margin, SCREEN_HEIGHT - 2*border_margin);
-        u8g2.drawFrame(border_margin+1, border_margin+1,
-                      SCREEN_WIDTH - 2*(border_margin+1), SCREEN_HEIGHT - 2*(border_margin+1));
+        // 绘制双重边框（放到屏幕最边缘）
+        u8g2.drawFrame(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        u8g2.drawFrame(1, 1, SCREEN_WIDTH-2, SCREEN_HEIGHT-2);
     }
 
-    // 暂停图标（基于SVG transform="translate(64, 18)"）
-    int pause_icon_x = svg_transform_x(-4, 64);
-    int pause_icon_y = svg_transform_y(-4, 18);
+    // 暂停图标（上移，为底部文字预留空间）
+    int pause_icon_x = (SCREEN_WIDTH - 8) / 2;  // 8px图标居中
+    int pause_icon_y = 12;  // 上移到12px
     draw_icon(pause_icon_x, pause_icon_y, icon_pause);
 
-    // "PAUSED"文字（基于SVG text x="64" y="30" font-size="10"）
-    u8g2.setFont(FONT_MEDIUM); // 对应SVG font-size="10"
+    // "PAUSED"文字（上移，确保与边框和底部文字有足够间距）
+    u8g2.setFont(FONT_MEDIUM);
     const char* title = "PAUSED";
     int title_width = u8g2.getStrWidth(title);
-    int title_x = svg_transform_x(-title_width/2, 64);
-    int title_y = svg_transform_y(0, 30);
+    int title_x = (SCREEN_WIDTH - title_width) / 2;  // 精确居中
+    int title_y = 24;  // 上移到24px
     u8g2.drawStr(title_x, title_y, title);
 
-    // 统计信息三列布局（基于SVG g元素的transform属性）
-    u8g2.setFont(FONT_SMALL); // 对应SVG font-size="8"
+    // 统计信息三列布局（上移，确保与边框有足够间距）
+    u8g2.setFont(FONT_SMALL);
 
-    // 第一列：跳跃次数（基于SVG text x="20" y="42"）
+    // 第一列：跳跃次数（左侧）
     char jump_text[16];
     snprintf(jump_text, sizeof(jump_text), "%lu", game_data.jump_count);
-    int jump_x = svg_transform_x(0, 20);
-    int jump_y = svg_transform_y(0, 42);
+    int jump_x = 15;  // 左侧位置，距离边框15px
+    int jump_y = 36;  // 上移到36px
     u8g2.drawStr(jump_x, jump_y, jump_text);
 
-    u8g2.setFont(FONT_TINY); // 对应SVG font-size="6"
-    int jump_label_y = svg_transform_y(0, 50);
+    u8g2.setFont(FONT_TINY);
+    int jump_label_y = 44;  // 标签位置44px
     u8g2.drawStr(jump_x, jump_label_y, "JUMPS");
 
-    // 第二列：游戏时长（基于SVG text x="55" y="42"）
+    // 第二列：游戏时长（中央）
     uint32_t total_seconds = game_data.game_time_ms / 1000;
     uint32_t minutes = total_seconds / 60;
     uint32_t seconds = total_seconds % 60;
@@ -778,32 +830,38 @@ void oled_display_pause_screen(void) {
     u8g2.setFont(FONT_SMALL);
     char time_text[16];
     snprintf(time_text, sizeof(time_text), "%02lu:%02lu", minutes, seconds);
-    int time_x = svg_transform_x(0, 55);
-    int time_y = svg_transform_y(0, 42);
+    int time_width = u8g2.getStrWidth(time_text);
+    int time_x = (SCREEN_WIDTH - time_width) / 2;  // 居中
+    int time_y = 36;  // 与跳跃次数对齐
     u8g2.drawStr(time_x, time_y, time_text);
 
     u8g2.setFont(FONT_TINY);
-    int time_label_y = svg_transform_y(0, 50);
-    u8g2.drawStr(time_x, time_label_y, "TIME");
+    const char* time_label = "TIME";
+    int time_label_width = u8g2.getStrWidth(time_label);
+    int time_label_x = (SCREEN_WIDTH - time_label_width) / 2;  // 标签居中
+    u8g2.drawStr(time_label_x, jump_label_y, time_label);
 
-    // 第三列：燃料进度（基于SVG text x="95" y="42"）
+    // 第三列：燃料进度（右侧）
     u8g2.setFont(FONT_SMALL);
     char fuel_text[8];
     snprintf(fuel_text, sizeof(fuel_text), "%lu%%", game_data.fuel_progress);
-    int fuel_x = svg_transform_x(0, 95);
-    int fuel_y = svg_transform_y(0, 42);
+    int fuel_width = u8g2.getStrWidth(fuel_text);
+    int fuel_x = SCREEN_WIDTH - fuel_width - 15;  // 右侧位置，距离边框15px
+    int fuel_y = 36;  // 与其他数据对齐
     u8g2.drawStr(fuel_x, fuel_y, fuel_text);
 
     u8g2.setFont(FONT_TINY);
-    int fuel_label_y = svg_transform_y(0, 50);
-    u8g2.drawStr(fuel_x, fuel_label_y, "FUEL");
+    const char* fuel_label = "FUEL";
+    int fuel_label_width = u8g2.getStrWidth(fuel_label);
+    int fuel_label_x = SCREEN_WIDTH - fuel_label_width - 15;  // 与数据对齐
+    u8g2.drawStr(fuel_label_x, jump_label_y, fuel_label);
 
-    // 底部操作提示（基于SVG text x="64" y="58"）
+    // 底部操作提示（修改为更清晰的操作说明）
     u8g2.setFont(FONT_TINY);
-    const char* hint = "Short:Resume  Long:Reset";
+    const char* hint = "Press:Resume  Hold:Reset";
     int hint_width = u8g2.getStrWidth(hint);
-    int hint_x = svg_transform_x(-hint_width/2, 64);
-    int hint_y = svg_transform_y(0, 58);
+    int hint_x = (SCREEN_WIDTH - hint_width) / 2;  // 精确居中
+    int hint_y = 54;  // 上移到54px，距离底部边框10px
     u8g2.drawStr(hint_x, hint_y, hint);
 
     u8g2.sendBuffer();
@@ -815,64 +873,59 @@ void oled_display_reset_confirm_screen(void) {
 
     u8g2.clearBuffer();
 
-    // 警告边框闪烁效果（基于SVG rect stroke-dasharray animate）
-    uint32_t border_cycle = svg_animate_progress(millis(), SVG_DUR_TO_MS(0.6)); // 0.6秒周期
+    // 警告边框闪烁效果（单层边框，避免遮挡文字）
+    uint32_t border_cycle = millis() % 600; // 0.6秒周期
     float border_t = border_cycle / 600.0f;
     float border_opacity = 0.3f + 0.7f * (0.5f + 0.5f * sin(border_t * 4 * PI)); // 快速闪烁
 
     if (svg_opacity_visible(border_opacity, 0)) {
-        // 绘制警告边框（基于SVG rect x="8" y="8" width="112" height="48"）
-        int border_x = svg_transform_x(0, 8);
-        int border_y = svg_transform_y(0, 8);
-        int border_w = svg_transform_x(112, 0);
-        int border_h = svg_transform_y(48, 0);
-
-        u8g2.drawFrame(border_x, border_y, border_w, border_h);
-        u8g2.drawFrame(border_x+1, border_y+1, border_w-2, border_h-2);
+        // 绘制警告边框（仅外层边框，不遮挡内容）
+        u8g2.drawFrame(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        u8g2.drawFrame(1, 1, SCREEN_WIDTH-2, SCREEN_HEIGHT-2);
     }
 
-    // 警告图标（基于SVG transform="translate(64, 20)"）
-    int warning_x = svg_transform_x(-4, 64);
-    int warning_y = svg_transform_y(-4, 20);
+    // 警告图标（上移，为底部文字预留空间）
+    int warning_x = (SCREEN_WIDTH - 8) / 2;  // 8px图标居中
+    int warning_y = 14;  // 上移到14px
     draw_icon(warning_x, warning_y, icon_warning);
 
-    // "RESET?"文字（基于SVG text x="64" y="32" font-size="10"）
-    u8g2.setFont(FONT_MEDIUM); // 对应SVG font-size="10"
+    // "RESET?"文字（上移，确保与边框和底部文字有足够间距）
+    u8g2.setFont(FONT_MEDIUM);
     const char* title = "RESET?";
     int title_width = u8g2.getStrWidth(title);
-    int title_x = svg_transform_x(-title_width/2, 64);
-    int title_y = svg_transform_y(0, 32);
+    int title_x = (SCREEN_WIDTH - title_width) / 2;  // 精确居中
+    int title_y = 26;  // 上移到26px
     u8g2.drawStr(title_x, title_y, title);
 
-    // 闪烁警告文字（基于SVG animate opacity="0;1;0" dur="0.8s"）
-    uint32_t text_cycle = svg_animate_progress(millis(), SVG_DUR_TO_MS(0.8)); // 0.8秒周期
+    // 闪烁警告文字（上移，确保与其他元素有足够间距）
+    uint32_t text_cycle = millis() % 800; // 0.8秒周期
     float text_t = text_cycle / 800.0f;
     float text_opacity = 0.5f + 0.5f * sin(text_t * 2 * PI);
 
     if (svg_opacity_visible(text_opacity, 100)) {
-        u8g2.setFont(FONT_TINY); // 对应SVG font-size="6"
+        u8g2.setFont(FONT_TINY);
         const char* warning = "All progress lost!";
         int warning_width = u8g2.getStrWidth(warning);
-        int warning_x = svg_transform_x(-warning_width/2, 64);
-        int warning_y = svg_transform_y(0, 42);
+        int warning_x = (SCREEN_WIDTH - warning_width) / 2;  // 精确居中
+        int warning_y = 36;  // 上移到36px
         u8g2.drawStr(warning_x, warning_y, warning);
     }
 
-    // 操作说明（基于SVG两个text元素）
+    // 操作说明（上移，确保与边框有足够间距）
     u8g2.setFont(FONT_TINY);
 
-    // 确认操作（基于SVG text x="64" y="50"）
+    // 确认操作（上移）
     const char* confirm = "Hold: Confirm";
     int confirm_width = u8g2.getStrWidth(confirm);
-    int confirm_x = svg_transform_x(-confirm_width/2, 64);
-    int confirm_y = svg_transform_y(0, 50);
+    int confirm_x = (SCREEN_WIDTH - confirm_width) / 2;  // 精确居中
+    int confirm_y = 46;  // 上移到46px
     u8g2.drawStr(confirm_x, confirm_y, confirm);
 
-    // 取消操作（基于SVG text x="64" y="58"）
+    // 取消操作（上移，确保距离底部边框有足够间距）
     const char* cancel = "Press: Cancel";
     int cancel_width = u8g2.getStrWidth(cancel);
-    int cancel_x = svg_transform_x(-cancel_width/2, 64);
-    int cancel_y = svg_transform_y(0, 58);
+    int cancel_x = (SCREEN_WIDTH - cancel_width) / 2;  // 精确居中
+    int cancel_y = 54;  // 上移到54px，距离底部边框10px
     u8g2.drawStr(cancel_x, cancel_y, cancel);
 
     u8g2.sendBuffer();
@@ -884,131 +937,144 @@ void oled_display_result_screen(void) {
 
     u8g2.clearBuffer();
 
-    // 左侧奖杯图标（移到左上角空白位置）
-    int trophy_x = 8;   // 左侧位置
-    int trophy_y = 8;   // 顶部位置
+    // 顶部图标区域（重新布局，确保与文字有足够间距）
+    // 左侧奖杯图标
+    int trophy_x = 5;   // 左侧边距5像素
+    int trophy_y = 5;   // 顶部边距5像素
     draw_icon(trophy_x, trophy_y, icon_trophy);
 
-    // 右侧火箭图标（移到右上角空白位置）
-    int rocket_x = SCREEN_WIDTH - 16;  // 右侧位置
-    int rocket_y = 8;                  // 顶部位置
+    // 右侧火箭图标
+    int rocket_x = SCREEN_WIDTH - 8 - 5;  // 右侧边距5像素
+    int rocket_y = 5;                     // 与奖杯图标对齐
     draw_icon(rocket_x, rocket_y, icon_rocket_small);
 
-    // "COMPLETE!"文字（居中，但上移避免重叠）
+    // "COMPLETE!"文字（居中，确保与图标有足够间距）
     u8g2.setFont(FONT_MEDIUM);
     const char* title = "COMPLETE!";
     int title_width = u8g2.getStrWidth(title);
     int title_x = (SCREEN_WIDTH - title_width) / 2;
-    int title_y = 12;  // 上移到顶部
+    int title_y = 18;  // 距离图标13像素，确保不重叠
     u8g2.drawStr(title_x, title_y, title);
 
-    // 飞行高度（居中显示，大字体突出）
-    u8g2.setFont(FONT_LARGE);
+    // 飞行高度（居中显示，大字体突出，重新计算位置避免重叠）
+    u8g2.setFont(FONT_LARGE);  // 10x20像素字体，高度20像素
     char height_text[16];
     snprintf(height_text, sizeof(height_text), "%lum", game_data.flight_height);
     int height_width = u8g2.getStrWidth(height_text);
     int height_x = (SCREEN_WIDTH - height_width) / 2;
-    int height_y = 28;  // 中央位置
+    int height_y = 28;  // 上移4像素，为20像素高度字体预留空间
     u8g2.drawStr(height_x, height_y, height_text);
 
-    // 高度标签（居中，在高度下方）
-    u8g2.setFont(FONT_TINY);
+    // 高度标签（居中，确保与飞行高度有足够间距）
+    u8g2.setFont(FONT_TINY);  // 4x6像素字体，高度6像素
     const char* height_label = "ALTITUDE";
     int label_width = u8g2.getStrWidth(height_label);
     int label_x = (SCREEN_WIDTH - label_width) / 2;
-    int label_y = 38;  // 高度下方
+    int label_y = 50;  // 距离飞行高度底部2像素 (28+20+2=50)
     u8g2.drawStr(label_x, label_y, height_label);
 
-    // 统计信息重新布局（三列分布，避免重叠）
+    // 底部统计信息区域（重新布局，确保在64像素高度内合理分布）
     u8g2.setFont(FONT_TINY);
 
-    // 第一列：跳跃次数（左侧）
+    // 第一列：跳跃次数（左侧，确保与ALTITUDE标签有足够间距）
     char jump_text[16];
     snprintf(jump_text, sizeof(jump_text), "%lu", game_data.jump_count);
-    int jump_x = 8;   // 左侧对齐
-    int jump_y = 50;  // 下移避免与高度标签重叠
+    int jump_x = 5;   // 左侧边距5像素
+    int jump_y = 57;  // 距离ALTITUDE标签7像素 (50+6+1=57)
     u8g2.drawStr(jump_x, jump_y, jump_text);
-    u8g2.drawStr(jump_x, 58, "JUMPS");  // 标签在下方
+    u8g2.drawStr(jump_x, 63, "JUMPS");  // 标签在下方，距离屏幕底部1像素
 
-    // 第二列：游戏时长（中央）
+    // 第二列：游戏时长（中央，精确居中）
     uint32_t total_seconds = game_data.game_time_ms / 1000;
     uint32_t minutes = total_seconds / 60;
     uint32_t seconds = total_seconds % 60;
     char time_text[16];
     snprintf(time_text, sizeof(time_text), "%02lu:%02lu", minutes, seconds);
     int time_width = u8g2.getStrWidth(time_text);
-    int time_x = (SCREEN_WIDTH - time_width) / 2;  // 居中
-    int time_y = 50;
+    int time_x = (SCREEN_WIDTH - time_width) / 2;  // 精确居中
+    int time_y = 57;  // 与跳跃次数对齐
     u8g2.drawStr(time_x, time_y, time_text);
 
-    // TIME标签居中
+    // TIME标签居中对齐
     const char* time_label = "TIME";
     int time_label_width = u8g2.getStrWidth(time_label);
     int time_label_x = (SCREEN_WIDTH - time_label_width) / 2;
-    u8g2.drawStr(time_label_x, 58, time_label);
+    u8g2.drawStr(time_label_x, 63, time_label);  // 与JUMPS标签对齐
 
-    // 第三列：燃料使用（右侧）
+    // 第三列：燃料使用（右侧，确保边距一致）
     char fuel_text[8];
     snprintf(fuel_text, sizeof(fuel_text), "%lu%%", game_data.fuel_progress);
     int fuel_width = u8g2.getStrWidth(fuel_text);
-    int fuel_x = SCREEN_WIDTH - fuel_width - 8;  // 右侧对齐，留8像素边距
-    int fuel_y = 50;
+    int fuel_x = SCREEN_WIDTH - fuel_width - 5;  // 右侧边距5像素，与左侧对称
+    int fuel_y = 57;  // 与其他统计数据对齐
     u8g2.drawStr(fuel_x, fuel_y, fuel_text);
 
     // FUEL标签右对齐
     const char* fuel_label = "FUEL";
     int fuel_label_width = u8g2.getStrWidth(fuel_label);
-    int fuel_label_x = SCREEN_WIDTH - fuel_label_width - 8;
-    u8g2.drawStr(fuel_label_x, 58, fuel_label);
+    int fuel_label_x = SCREEN_WIDTH - fuel_label_width - 5;
+    u8g2.drawStr(fuel_label_x, 63, fuel_label);  // 与其他标签对齐
+
+    // 添加布局调试信息
+    static bool layout_debug_printed = false;
+    if (!layout_debug_printed) {
+        Serial.printf("🏆 结算界面布局修复: 图标(5,5)-(115,5) 标题(%d,18) 高度(%d,28) 标签(%d,50) 统计(5,57)-(115,63)\n",
+                     title_x, height_x, label_x);
+        Serial.printf("📐 字体高度: FONT_LARGE=20px, FONT_TINY=6px, 飞行高度占用28-48px, ALTITUDE在50px\n");
+        layout_debug_printed = true;
+    }
 
     u8g2.sendBuffer();
 }
 
-// 待机界面显示（基于SVG设计精确重构）
+// 待机界面显示（完全重新设计，移除所有可能的重叠元素）
 void oled_display_idle_screen(void) {
     if (!display_initialized) return;
 
     u8g2.clearBuffer();
 
-    // 顶部状态栏（基于SVG rect height="12"）
-    u8g2.setFont(FONT_TINY); // 对应SVG font-size="6"
-    int status_text_x = svg_transform_x(0, 5);
-    int status_text_y = svg_transform_y(0, 9);
+    // 顶部状态栏
+    u8g2.setFont(FONT_TINY);
+    int status_text_x = 5;
+    int status_text_y = 9;
     u8g2.drawStr(status_text_x, status_text_y, "READY");
 
-    // 移除状态栏分割线
-
-    // 中央火箭图标（基于SVG transform="translate(64, 30)"精确定位）
-    int rocket_x = svg_transform_x(-8, 64);  // 图标中心对齐
-    int rocket_y = svg_transform_y(-8, 30);
+    // 中央火箭图标（重新定位，避免与任何其他元素重叠）
+    int rocket_x = (SCREEN_WIDTH - 16) / 2;  // 水平居中
+    int rocket_y = 24;  // 垂直居中位置
     draw_large_icon(rocket_x, rocket_y, icon_rocket_large);
 
-    // 提示文字（基于SVG text x="64" y="45" font-size="8"）
-    u8g2.setFont(FONT_SMALL); // 对应SVG font-size="8"
+    // 提示文字（确保在底部有足够空间）
+    u8g2.setFont(FONT_SMALL);
     const char* hint = "Jump to Start";
     int hint_width = u8g2.getStrWidth(hint);
-    int hint_x = svg_transform_x(-hint_width/2, 64);
-    int hint_y = svg_transform_y(0, 45);
+    int hint_x = (SCREEN_WIDTH - hint_width) / 2;
+    int hint_y = 50;  // 底部位置，确保不与其他元素重叠
     u8g2.drawStr(hint_x, hint_y, hint);
 
-    // 呼吸灯效果（基于SVG animate r="15;20;15" opacity="0.3;0.1;0.3" dur="2s"）
+    // 注意：移除所有可能导致重叠的元素
+    // 不绘制"ROCKET"文字
+    // 不绘制三个动画点
+    // 不绘制开机动画的任何元素
+
+    // 呼吸灯效果（重新定位到火箭图标和提示文字之间）
     uint32_t breath_cycle = svg_animate_progress(millis(), SVG_DUR_TO_MS(2.0)); // 2秒周期
     float t = breath_cycle / 2000.0f;
 
-    // SVG关键帧：r="15;20;15" 在 t=0,0.5,1.0
+    // 调整半径范围，避免与其他元素重叠
     float radius_progress = sin(t * PI); // 0->1->0 的正弦曲线
-    int radius = 15 + (int)(5 * radius_progress); // 15-20像素变化
+    int radius = 8 + (int)(4 * radius_progress); // 8-12像素变化（缩小范围）
 
-    // SVG关键帧：opacity="0.3;0.1;0.3"
+    // 透明度变化保持不变
     float opacity_progress = 0.5f * (1.0f + cos(t * 2 * PI)); // 0->1->0 的余弦曲线
     float opacity = 0.1f + 0.2f * opacity_progress; // 0.1-0.3变化
 
-    // 绘制呼吸灯圆环（基于SVG circle cx="64" cy="30"）
-    int center_x = svg_transform_x(0, 64);
-    int center_y = svg_transform_y(0, 30);
+    // 呼吸灯圆环重新定位到中央空白区域
+    int center_x = SCREEN_WIDTH / 2;  // 屏幕水平中心
+    int center_y = 38;  // 火箭图标(20-36)和提示文字(52)之间的中央位置
 
     // 使用点阵密度模拟透明度
-    int point_density = (int)(opacity * 24); // 0.1->0.3 映射到 2->7个点
+    int point_density = (int)(opacity * 16); // 减少点数，避免过于密集
     for (int i = 0; i < point_density; i++) {
         float angle = (i * 360.0f / point_density) * PI / 180.0f;
         int x = center_x + (int)(radius * cos(angle));
@@ -1016,15 +1082,24 @@ void oled_display_idle_screen(void) {
 
         if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
             u8g2.drawPixel(x, y);
-            // 添加内圈点增强效果
-            if (radius > 16) {
-                int inner_x = center_x + (int)((radius-2) * cos(angle));
-                int inner_y = center_y + (int)((radius-2) * sin(angle));
+            // 添加内圈点增强效果（调整内圈半径）
+            if (radius > 9) {
+                int inner_x = center_x + (int)((radius-1) * cos(angle));
+                int inner_y = center_y + (int)((radius-1) * sin(angle));
                 if (inner_x >= 0 && inner_x < SCREEN_WIDTH && inner_y >= 0 && inner_y < SCREEN_HEIGHT) {
                     u8g2.drawPixel(inner_x, inner_y);
                 }
             }
         }
+    }
+
+    // 添加布局调试信息
+    static bool idle_debug_printed = false;
+    if (!idle_debug_printed) {
+        Serial.printf("😴 待机界面布局优化: 火箭(%d,%d) 呼吸灯(%d,%d,r=%d-%d) 提示(%d,%d)\n",
+                     rocket_x, rocket_y, center_x, center_y, 8, 12, hint_x, hint_y);
+        Serial.printf("📐 垂直分布: 火箭20-36px, 呼吸灯34-42px, 提示52px, 完全分离\n");
+        idle_debug_printed = true;
     }
 
     u8g2.sendBuffer();

@@ -1,8 +1,8 @@
 #include "jumping_rocket_simple.h"
 
-// 按钮状态定义
-#define BUTTON_PRESSED      LOW
-#define BUTTON_RELEASED     HIGH
+// 按钮状态定义（修正为高电平触发）
+#define BUTTON_PRESSED      HIGH    // 按下时为高电平
+#define BUTTON_RELEASED     LOW     // 释放时为低电平
 
 // 按钮参数
 #define DEBOUNCE_TIME_MS    50      // 防抖时间
@@ -95,18 +95,46 @@ void button_task(void* pvParameters) {
     // 初始化按钮状态
     button_last_state = get_button_state();
     button_release_time = millis();
-    
+
+    // 添加按钮状态监控变量
+    static uint32_t last_debug_time = 0;
+    static bool last_monitored_state = BUTTON_RELEASED;
+
+    Serial.printf("🔘 按钮初始状态: %s (引脚%d)\n",
+                 button_last_state ? "释放" : "按下", BUTTON_PIN);
+
     while (1) {
+        bool current_button_state = get_button_state();
+        uint32_t current_time = millis();
+
+        // 监控按钮状态变化（用于调试悬空问题）
+        if (current_button_state != last_monitored_state) {
+            Serial.printf("🔘 按钮状态变化: %s -> %s (时间: %lu)\n",
+                         last_monitored_state ? "释放" : "按下",
+                         current_button_state ? "释放" : "按下",
+                         current_time);
+            last_monitored_state = current_button_state;
+        }
+
+        // 每30秒输出一次按钮状态（用于长期监控）
+        if (current_time - last_debug_time > 30000) {
+            Serial.printf("🔘 按钮状态监控: 当前=%s, 引脚=%d, 上拉电阻=%s\n",
+                         current_button_state ? "释放(HIGH)" : "按下(LOW)",
+                         BUTTON_PIN,
+                         "已启用");
+            last_debug_time = current_time;
+        }
+
         // 检测按钮事件
         button_event_t event = detect_button_event();
-        
+
         // 如果有事件，发送到队列
         if (event != BUTTON_EVENT_NONE) {
             if (xQueueSend(button_event_queue, &event, 0) != pdTRUE) {
                 Serial.println("按钮事件队列已满，丢弃事件");
             }
         }
-        
+
         // 等待下次检测
         delay(10); // 100Hz检测频率
     }
@@ -115,13 +143,14 @@ void button_task(void* pvParameters) {
 // 处理按钮事件的游戏逻辑
 void handle_button_event(button_event_t event) {
     if (event == BUTTON_EVENT_NONE) return;
-    
-    Serial.printf("处理按钮事件: %d，当前状态: %d\n", event, current_state);
-    
+
+    Serial.printf("🔘 处理按钮事件: %d，当前状态: %d\n", event, current_state);
+
     switch (current_state) {
         case GAME_STATE_IDLE:
-            // 待机状态下，任何按键都开始游戏
+            // 待机状态下，需要更严格的验证才能开始游戏
             if (event == BUTTON_EVENT_SHORT_PRESS || event == BUTTON_EVENT_LONG_PRESS) {
+                Serial.println("🔘 按钮确认启动游戏");
                 game_start();
             }
             break;

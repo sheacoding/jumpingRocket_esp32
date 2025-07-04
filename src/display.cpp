@@ -942,96 +942,94 @@ void oled_display_reset_confirm_screen(void) {
     u8g2.sendBuffer();
 }
 
-// 结算界面显示（重新布局，避免重叠，图标移到两侧）
+// 结算界面显示（上移内容，分离时间与标签，保留底部图标）
 void oled_display_result_screen(void) {
     if (!display_initialized) return;
 
     u8g2.clearBuffer();
 
-    // 顶部图标区域（重新布局，确保与文字有足够间距）
+    // === 顶部图标区域 ===
     // 左侧奖杯图标
     int trophy_x = 5;   // 左侧边距5像素
-    int trophy_y = 5;   // 顶部边距5像素
+    int trophy_y = 2;   // 顶部边距2像素
     draw_icon(trophy_x, trophy_y, icon_trophy);
 
     // 右侧火箭图标
     int rocket_x = SCREEN_WIDTH - 8 - 5;  // 右侧边距5像素
-    int rocket_y = 5;                     // 与奖杯图标对齐
+    int rocket_y = 2;                     // 与奖杯图标对齐
     draw_icon(rocket_x, rocket_y, icon_rocket_small);
 
-    // "COMPLETE!"文字（居中，确保与图标有足够间距）
-    u8g2.setFont(FONT_MEDIUM);
-    const char* title = "COMPLETE!";
-    int title_width = u8g2.getStrWidth(title);
-    int title_x = (SCREEN_WIDTH - title_width) / 2;
-    int title_y = 18;  // 距离图标13像素，确保不重叠
-    u8g2.drawStr(title_x, title_y, title);
+    // === 时间标签区域（移到原标题位置） ===
+    // "EXERCISE TIME"标签（移到原COMPLETE!位置）
+    u8g2.setFont(FONT_SMALL);  // 使用小字体
+    const char* time_label = "EXERCISE TIME";
+    int time_label_width = u8g2.getStrWidth(time_label);
+    int time_label_x = (SCREEN_WIDTH - time_label_width) / 2;
+    int time_label_y = 15;  // 移到原COMPLETE!的位置15px
+    u8g2.drawStr(time_label_x, time_label_y, time_label);
 
-    // 飞行高度（居中显示，大字体突出，重新计算位置避免重叠）
-    u8g2.setFont(FONT_LARGE);  // 10x20像素字体，高度20像素
-    char height_text[16];
-    snprintf(height_text, sizeof(height_text), "%lum", game_data.flight_height);
-    int height_width = u8g2.getStrWidth(height_text);
-    int height_x = (SCREEN_WIDTH - height_width) / 2;
-    int height_y = 28;  // 上移4像素，为20像素高度字体预留空间
-    u8g2.drawStr(height_x, height_y, height_text);
-
-    // 高度标签（居中，确保与飞行高度有足够间距）
-    u8g2.setFont(FONT_TINY);  // 4x6像素字体，高度6像素
-    const char* height_label = "ALTITUDE";
-    int label_width = u8g2.getStrWidth(height_label);
-    int label_x = (SCREEN_WIDTH - label_width) / 2;
-    int label_y = 50;  // 距离飞行高度底部2像素 (28+20+2=50)
-    u8g2.drawStr(label_x, label_y, height_label);
-
-    // 底部统计信息区域（重新布局，确保在64像素高度内合理分布）
-    u8g2.setFont(FONT_TINY);
-
-    // 第一列：跳跃次数（左侧，确保与ALTITUDE标签有足够间距）
-    char jump_text[16];
-    snprintf(jump_text, sizeof(jump_text), "%lu", game_data.jump_count);
-    int jump_x = 5;   // 左侧边距5像素
-    int jump_y = 57;  // 距离ALTITUDE标签7像素 (50+6+1=57)
-    u8g2.drawStr(jump_x, jump_y, jump_text);
-    u8g2.drawStr(jump_x, 63, "JUMPS");  // 标签在下方，距离屏幕底部1像素
-
-    // 第二列：游戏时长（中央，精确居中）
+    // === 时间显示区域（重新调整） ===
+    // 健身时长（主要功能，使用大字体突出显示）
     uint32_t total_seconds = game_data.game_time_ms / 1000;
     uint32_t minutes = total_seconds / 60;
     uint32_t seconds = total_seconds % 60;
+
+    u8g2.setFont(FONT_LARGE);  // 使用大字体突出时间
     char time_text[16];
     snprintf(time_text, sizeof(time_text), "%02lu:%02lu", minutes, seconds);
     int time_width = u8g2.getStrWidth(time_text);
-    int time_x = (SCREEN_WIDTH - time_width) / 2;  // 精确居中
-    int time_y = 57;  // 与跳跃次数对齐
+    int time_x = (SCREEN_WIDTH - time_width) / 2;
+    int time_y = 28;  // 保持在28px位置
     u8g2.drawStr(time_x, time_y, time_text);
 
-    // TIME标签居中对齐
-    const char* time_label = "TIME";
-    int time_label_width = u8g2.getStrWidth(time_label);
-    int time_label_x = (SCREEN_WIDTH - time_label_width) / 2;
-    u8g2.drawStr(time_label_x, 63, time_label);  // 与JUMPS标签对齐
+    // === 底部统计区域（移除按键提示，重新调整布局） ===
+    u8g2.setFont(FONT_TINY);  // 统一使用小字体
 
-    // 第三列：燃料使用（右侧，确保边距一致）
+    // 第一列：跳跃次数（左侧）
+    char jump_text[16];
+    snprintf(jump_text, sizeof(jump_text), "%lu", game_data.jump_count);
+    int jump_x = 8;   // 左侧边距8px
+    int jump_y = 45;  // 下移到45px，为上方内容预留更多空间
+    u8g2.drawStr(jump_x, jump_y, jump_text);
+    u8g2.drawStr(jump_x, 55, "JUMPS");  // 标签位置55px
+
+    // 第二列：飞行高度（中央）
+    char height_text[16];
+    snprintf(height_text, sizeof(height_text), "%lum", game_data.flight_height);
+    int height_width = u8g2.getStrWidth(height_text);
+    int height_x = (SCREEN_WIDTH - height_width) / 2;  // 居中
+    int height_y = 45;  // 与跳跃次数对齐
+    u8g2.drawStr(height_x, height_y, height_text);
+
+    // 高度标签居中对齐
+    const char* height_label = "ALTITUDE";
+    int height_label_width = u8g2.getStrWidth(height_label);
+    int height_label_x = (SCREEN_WIDTH - height_label_width) / 2;
+    u8g2.drawStr(height_label_x, 55, height_label);
+
+    // 第三列：燃料使用（右侧）
     char fuel_text[8];
     snprintf(fuel_text, sizeof(fuel_text), "%lu%%", game_data.fuel_progress);
     int fuel_width = u8g2.getStrWidth(fuel_text);
-    int fuel_x = SCREEN_WIDTH - fuel_width - 5;  // 右侧边距5像素，与左侧对称
-    int fuel_y = 57;  // 与其他统计数据对齐
+    int fuel_x = SCREEN_WIDTH - fuel_width - 8;  // 右侧边距8px
+    int fuel_y = 45;  // 与其他统计数据对齐
     u8g2.drawStr(fuel_x, fuel_y, fuel_text);
 
-    // FUEL标签右对齐
+    // 燃料标签右对齐
     const char* fuel_label = "FUEL";
     int fuel_label_width = u8g2.getStrWidth(fuel_label);
-    int fuel_label_x = SCREEN_WIDTH - fuel_label_width - 5;
-    u8g2.drawStr(fuel_label_x, 63, fuel_label);  // 与其他标签对齐
+    int fuel_label_x = SCREEN_WIDTH - fuel_label_width - 8;
+    u8g2.drawStr(fuel_label_x, 55, fuel_label);
 
     // 添加布局调试信息
     static bool layout_debug_printed = false;
     if (!layout_debug_printed) {
-        Serial.printf("🏆 结算界面布局修复: 图标(5,5)-(115,5) 标题(%d,18) 高度(%d,28) 标签(%d,50) 统计(5,57)-(115,63)\n",
-                     title_x, height_x, label_x);
-        Serial.printf("📐 字体高度: FONT_LARGE=20px, FONT_TINY=6px, 飞行高度占用28-48px, ALTITUDE在50px\n");
+        Serial.printf("🏆 结算界面布局优化: 移除COMPLETE!，EXERCISE TIME上移\n");
+        Serial.printf("   图标区域: 奖杯(5,2) 火箭(115,2)\n");
+        Serial.printf("   时间标签: EXERCISE TIME (%d,15) - 移到原标题位置\n", time_label_x);
+        Serial.printf("   时间: %s (%d,28) - 大字体突出显示\n", time_text, time_x);
+        Serial.printf("   统计数据: (45px) 标签: (55px)\n");
+        Serial.printf("   垂直分布: 图标2px, 时间标签15px, 时间28px, 统计45px, 标签55px\n");
         layout_debug_printed = true;
     }
 

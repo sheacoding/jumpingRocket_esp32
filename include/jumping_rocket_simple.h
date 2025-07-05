@@ -6,12 +6,7 @@
 #include <U8g2lib.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
-
-// 硬件引脚定义
-#define I2C_SCL_PIN                 22    // I2C SCL引脚
-#define I2C_SDA_PIN                 21    // I2C SDA引脚
-#define BUTTON_PIN                  2     // 按钮引脚
-#define BUZZER_PIN                  25    // 蜂鸣器引脚
+#include "board_config.h"
 
 #define OLED_WIDTH                  128   // OLED宽度
 #define OLED_HEIGHT                 64    // OLED高度

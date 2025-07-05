@@ -1,8 +1,8 @@
 #include "jumping_rocket_simple.h"
 
-// 按钮状态定义（修正为高电平触发）
-#define BUTTON_PRESSED      HIGH    // 按下时为高电平
-#define BUTTON_RELEASED     LOW     // 释放时为低电平
+// 按钮状态定义（根据开发板自动配置）
+static uint8_t BUTTON_PRESSED;      // 按下时的电平（根据开发板配置）
+static uint8_t BUTTON_RELEASED;     // 释放时的电平（根据开发板配置）
 
 // 按钮参数
 #define DEBOUNCE_TIME_MS    50      // 防抖时间
@@ -83,7 +83,17 @@ button_event_t button_get_event(void) {
 // 按钮任务
 void button_task(void* pvParameters) {
     Serial.println("按钮任务启动");
-    
+
+    // 初始化按钮配置
+    uint8_t pin, pull_mode, active_level;
+    board_get_button_config(&pin, &pull_mode, &active_level);
+
+    BUTTON_PRESSED = active_level;
+    BUTTON_RELEASED = (active_level == HIGH) ? LOW : HIGH;
+
+    Serial.printf("🔘 按钮配置: GPIO%d, %s触发\n",
+                 pin, (active_level == HIGH) ? "高电平" : "低电平");
+
     // 创建按钮事件队列
     button_event_queue = xQueueCreate(5, sizeof(button_event_t));
     if (!button_event_queue) {
@@ -91,7 +101,7 @@ void button_task(void* pvParameters) {
         vTaskDelete(NULL);
         return;
     }
-    
+
     // 初始化按钮状态
     button_last_state = get_button_state();
     button_release_time = millis();
@@ -101,7 +111,7 @@ void button_task(void* pvParameters) {
     static bool last_monitored_state = BUTTON_RELEASED;
 
     Serial.printf("🔘 按钮初始状态: %s (引脚%d)\n",
-                 button_last_state ? "释放" : "按下", BUTTON_PIN);
+                 (button_last_state == BUTTON_PRESSED) ? "按下" : "释放", pin);
 
     while (1) {
         bool current_button_state = get_button_state();
@@ -110,8 +120,8 @@ void button_task(void* pvParameters) {
         // 监控按钮状态变化（用于调试悬空问题）
         if (current_button_state != last_monitored_state) {
             Serial.printf("🔘 按钮状态变化: %s -> %s (时间: %lu)\n",
-                         last_monitored_state ? "释放" : "按下",
-                         current_button_state ? "释放" : "按下",
+                         (last_monitored_state == BUTTON_PRESSED) ? "按下" : "释放",
+                         (current_button_state == BUTTON_PRESSED) ? "按下" : "释放",
                          current_time);
             last_monitored_state = current_button_state;
         }

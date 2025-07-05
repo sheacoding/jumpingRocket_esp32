@@ -1,0 +1,222 @@
+<svg viewBox="0 0 1200 1400" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景 -->
+  <rect width="1200" height="1400" fill="#f8f9fa"/>
+  
+  <!-- 标题 -->
+  <text x="600" y="30" text-anchor="middle" font-size="20" font-weight="bold" fill="#2c3e50">蹦跳小火箭 V3.0 程序流程图</text>
+  
+  <!-- 开始 -->
+  <ellipse cx="600" cy="80" rx="80" ry="30" fill="#27ae60" stroke="#2c3e50" stroke-width="2"/>
+  <text x="600" y="88" text-anchor="middle" font-size="14" font-weight="bold" fill="white">系统启动</text>
+  
+  <!-- 初始化 -->
+  <rect x="520" y="130" width="160" height="60" fill="#3498db" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="600" y="155" text-anchor="middle" font-size="12" font-weight="bold" fill="white">硬件初始化</text>
+  <text x="600" y="175" text-anchor="middle" font-size="10" fill="white">ESP32/I2C/GPIO/文件系统</text>
+  
+  <!-- 检查唤醒原因 -->
+  <polygon points="550,220 650,220 680,260 650,300 550,300 520,260" fill="#f39c12" stroke="#2c3e50" stroke-width="2"/>
+  <text x="600" y="255" text-anchor="middle" font-size="12" font-weight="bold" fill="white">检查唤醒原因</text>
+  <text x="600" y="275" text-anchor="middle" font-size="10" fill="white">按钮/运动/定时器</text>
+  
+  <!-- 深度睡眠唤醒处理 -->
+  <rect x="300" y="220" width="140" height="80" fill="#9b59b6" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="370" y="250" text-anchor="middle" font-size="12" font-weight="bold" fill="white">深度睡眠</text>
+  <text x="370" y="270" text-anchor="middle" font-size="12" font-weight="bold" fill="white">唤醒处理</text>
+  <text x="370" y="290" text-anchor="middle" font-size="10" fill="white">恢复运行状态</text>
+  
+  <!-- 主菜单 -->
+  <rect x="520" y="350" width="160" height="60" fill="#2ecc71" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="600" y="375" text-anchor="middle" font-size="12" font-weight="bold" fill="white">主菜单显示</text>
+  <text x="600" y="395" text-anchor="middle" font-size="10" fill="white">开始游戏/查看数据/设置</text>
+  
+  <!-- 按钮检测 -->
+  <polygon points="550,440 650,440 680,480 650,520 550,520 520,480" fill="#e74c3c" stroke="#2c3e50" stroke-width="2"/>
+  <text x="600" y="475" text-anchor="middle" font-size="12" font-weight="bold" fill="white">按钮检测</text>
+  <text x="600" y="495" text-anchor="middle" font-size="10" fill="white">单击/双击/长按</text>
+  
+  <!-- 功能分支 -->
+  <rect x="120" y="570" width="140" height="60" fill="#34495e" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="190" y="595" text-anchor="middle" font-size="12" font-weight="bold" fill="white">开始游戏</text>
+  <text x="190" y="615" text-anchor="middle" font-size="10" fill="white">选择难度</text>
+  
+  <rect x="300" y="570" width="140" height="60" fill="#34495e" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="370" y="595" text-anchor="middle" font-size="12" font-weight="bold" fill="white">查看数据</text>
+  <text x="370" y="615" text-anchor="middle" font-size="10" fill="white">7天历史记录</text>
+  
+  <rect x="480" y="570" width="140" height="60" fill="#34495e" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="550" y="595" text-anchor="middle" font-size="12" font-weight="bold" fill="white">系统设置</text>
+  <text x="550" y="615" text-anchor="middle" font-size="10" fill="white">音量/亮度等</text>
+  
+  <rect x="660" y="570" width="140" height="60" fill="#34495e" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="730" y="595" text-anchor="middle" font-size="12" font-weight="bold" fill="white">睡眠模式</text>
+  <text x="730" y="615" text-anchor="middle" font-size="10" fill="white">节能待机</text>
+  
+  <!-- 游戏流程 -->
+  <rect x="120" y="680" width="140" height="60" fill="#1abc9c" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="190" y="705" text-anchor="middle" font-size="12" font-weight="bold" fill="white">难度选择</text>
+  <text x="190" y="725" text-anchor="middle" font-size="10" fill="white">容易/普通/困难</text>
+  
+  <rect x="120" y="770" width="140" height="60" fill="#1abc9c" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="190" y="795" text-anchor="middle" font-size="12" font-weight="bold" fill="white">游戏准备</text>
+  <text x="190" y="815" text-anchor="middle" font-size="10" fill="white">3秒倒计时</text>
+  
+  <rect x="120" y="860" width="140" height="60" fill="#1abc9c" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="190" y="885" text-anchor="middle" font-size="12" font-weight="bold" fill="white">运动检测</text>
+  <text x="190" y="905" text-anchor="middle" font-size="10" fill="white">MPU6050监测跳跃</text>
+  
+  <!-- 跳跃检测循环 -->
+  <polygon points="70,980 190,980 220,1020 190,1060 70,1060 40,1020" fill="#f39c12" stroke="#2c3e50" stroke-width="2"/>
+  <text x="130" y="1015" text-anchor="middle" font-size="12" font-weight="bold" fill="white">检测到跳跃？</text>
+  <text x="130" y="1035" text-anchor="middle" font-size="10" fill="white">加速度阈值判断</text>
+  
+  <rect x="350" y="980" width="140" height="80" fill="#e67e22" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="420" y="1010" text-anchor="middle" font-size="12" font-weight="bold" fill="white">跳跃计数</text>
+  <text x="420" y="1030" text-anchor="middle" font-size="10" fill="white">更新能量条</text>
+  <text x="420" y="1050" text-anchor="middle" font-size="10" fill="white">声音/视觉反馈</text>
+  
+  <!-- 目标达成检查 -->
+  <polygon points="370,1100 490,1100 520,1140 490,1180 370,1180 340,1140" fill="#8e44ad" stroke="#2c3e50" stroke-width="2"/>
+  <text x="430" y="1135" text-anchor="middle" font-size="12" font-weight="bold" fill="white">达成目标？</text>
+  <text x="430" y="1155" text-anchor="middle" font-size="10" fill="white">根据难度判断</text>
+  
+  <!-- 火箭发射 -->
+  <rect x="600" y="1100" width="140" height="80" fill="#c0392b" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="670" y="1130" text-anchor="middle" font-size="12" font-weight="bold" fill="white">🚀火箭发射</text>
+  <text x="670" y="1150" text-anchor="middle" font-size="10" fill="white">发射动画</text>
+  <text x="670" y="1170" text-anchor="middle" font-size="10" fill="white">庆祝音效</text>
+  
+  <!-- 数据保存 -->
+  <rect x="600" y="1220" width="140" height="60" fill="#16a085" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="670" y="1245" text-anchor="middle" font-size="12" font-weight="bold" fill="white">数据保存</text>
+  <text x="670" y="1265" text-anchor="middle" font-size="10" fill="white">更新日常记录</text>
+  
+  <!-- 返回主菜单 -->
+  <rect x="520" y="1320" width="160" height="60" fill="#7f8c8d" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="600" y="1345" text-anchor="middle" font-size="12" font-weight="bold" fill="white">返回主菜单</text>
+  <text x="600" y="1365" text-anchor="middle" font-size="10" fill="white">等待下次操作</text>
+  
+  <!-- 数据查看流程 -->
+  <rect x="800" y="680" width="140" height="60" fill="#95a5a6" stroke="#2c3e50" stroke-width="2" rx="10"/>
+  <text x="870" y="705" text-anchor="middle" font-size="12" font-weight="bold" fill="white">显示历史数据</text>
+  <text x="870" y="725" text-anchor="middle" font-size="10" fill="white">7天运动记录</text>
+  
+  <!-- 连接线 -->
+  <!-- 系统启动到初始化 -->
+  <line x1="600" y1="110" x2="600" y2="130" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 初始化到检查唤醒原因 -->
+  <line x1="600" y1="190" x2="600" y2="220" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 检查唤醒原因到深度睡眠处理 -->
+  <line x1="520" y1="260" x2="440" y2="260" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="480" y="255" text-anchor="middle" font-size="10" fill="#666">睡眠唤醒</text>
+  
+  <!-- 深度睡眠处理到主菜单 -->
+  <line x1="370" y1="300" x2="370" y2="330" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="370" y1="330" x2="600" y2="330" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="600" y1="330" x2="600" y2="350" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 检查唤醒原因到主菜单 -->
+  <line x1="600" y1="300" x2="600" y2="350" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="620" y="325" font-size="10" fill="#666">正常启动</text>
+  
+  <!-- 主菜单到按钮检测 -->
+  <line x1="600" y1="410" x2="600" y2="440" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 按钮检测到各功能分支 -->
+  <line x1="550" y1="500" x2="190" y2="500" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="190" y1="500" x2="190" y2="570" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="350" y="495" font-size="10" fill="#666">开始游戏</text>
+  
+  <line x1="580" y1="520" x2="580" y2="540" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="580" y1="540" x2="370" y2="540" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="370" y1="540" x2="370" y2="570" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="475" y="535" font-size="10" fill="#666">查看数据</text>
+  
+  <line x1="600" y1="520" x2="600" y2="540" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="600" y1="540" x2="550" y2="540" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="550" y1="540" x2="550" y2="570" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="575" y="535" font-size="10" fill="#666">系统设置</text>
+  
+  <line x1="620" y1="520" x2="620" y2="550" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="620" y1="550" x2="730" y2="550" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="730" y1="550" x2="730" y2="570" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="675" y="545" font-size="10" fill="#666">进入睡眠</text>
+  
+  <!-- 开始游戏流程 -->
+  <line x1="190" y1="630" x2="190" y2="680" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="190" y1="740" x2="190" y2="770" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="190" y1="830" x2="190" y2="860" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="190" y1="920" x2="190" y2="950" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="190" y1="950" x2="130" y2="950" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="130" y1="950" x2="130" y2="980" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 跳跃检测循环 -->
+  <line x1="220" y1="1020" x2="350" y2="1020" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="285" y="1015" font-size="10" fill="#666">检测到跳跃</text>
+  
+  <!-- 跳跃计数到目标检查 -->
+  <line x1="420" y1="1060" x2="420" y2="1080" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="420" y1="1080" x2="430" y2="1080" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="430" y1="1080" x2="430" y2="1100" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 目标达成到火箭发射 -->
+  <line x1="520" y1="1140" x2="600" y2="1140" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="560" y="1135" font-size="10" fill="#666">目标达成</text>
+  
+  <!-- 未达成目标回到跳跃检测 -->
+  <line x1="430" y1="1180" x2="430" y2="1200" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="430" y1="1200" x2="30" y2="1200" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="30" y1="1200" x2="30" y2="1020" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="30" y1="1020" x2="40" y2="1020" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="20" y="1110" font-size="10" fill="#666" transform="rotate(-90 20 1110)">继续检测</text>
+  
+  <!-- 未检测到跳跃回到检测 -->
+  <line x1="130" y1="1060" x2="130" y2="1080" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="130" y1="1080" x2="60" y2="1080" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="60" y1="1080" x2="60" y2="1000" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="60" y1="1000" x2="70" y2="1000" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="50" y="1040" font-size="10" fill="#666" transform="rotate(-90 50 1040)">未检测到</text>
+  
+  <!-- 火箭发射到数据保存 -->
+  <line x1="670" y1="1180" x2="670" y2="1220" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 数据保存到返回主菜单 -->
+  <line x1="670" y1="1280" x2="670" y2="1300" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="670" y1="1300" x2="600" y2="1300" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="600" y1="1300" x2="600" y2="1320" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 返回主菜单到按钮检测 -->
+  <line x1="520" y1="1350" x2="480" y2="1350" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="480" y1="1350" x2="480" y2="480" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="480" y1="480" x2="520" y2="480" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 查看数据到显示历史数据 -->
+  <line x1="370" y1="630" x2="370" y2="650" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="370" y1="650" x2="870" y2="650" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="870" y1="650" x2="870" y2="680" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 数据查看返回主菜单 -->
+  <line x1="870" y1="740" x2="870" y2="760" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="870" y1="760" x2="500" y2="760" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="500" y1="760" x2="500" y2="480" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="500" y1="480" x2="520" y2="480" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 设置和睡眠模式返回主菜单 -->
+  <line x1="550" y1="630" x2="550" y2="650" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="550" y1="650" x2="510" y2="650" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="510" y1="650" x2="510" y2="480" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="510" y1="480" x2="520" y2="480" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <line x1="730" y1="630" x2="730" y2="650" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="730" y1="650" x2="490" y2="650" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="490" y1="650" x2="490" y2="480" stroke="#2c3e50" stroke-width="2"/>
+  <line x1="490" y1="480" x2="520" y2="480" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- 箭头标记定义 -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2c3e50"/>
+    </marker>
+  </defs>

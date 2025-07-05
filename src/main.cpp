@@ -16,19 +16,26 @@ extern "C" {
 }
 
 void setup() {
+    #ifdef UART_RX_PIN
+    Serial.begin(115200, SERIAL_8N1, UART_RX_PIN, UART_TX_PIN);
+    #else
     Serial.begin(115200);
+    #endif
+    
     delay(2000); // 等待串口稳定
     Serial.println("\n\n========================================");
-    Serial.println("蹦跳小火箭 V2.0 启动");
+    Serial.println("🚀 蹦跳小火箭 V2.0 启动 - 调试模式");
     Serial.println("========================================");
+    Serial.println("检查串口通信是否正常...");
 
     // 显示系统信息
     Serial.printf("ESP32 芯片型号: %s\n", ESP.getChipModel());
     Serial.printf("芯片版本: %d\n", ESP.getChipRevision());
     Serial.printf("CPU频率: %d MHz\n", ESP.getCpuFreqMHz());
     Serial.printf("空闲堆内存: %d bytes\n", ESP.getFreeHeap());
+    Serial.printf("开发板类型: %s\n", BOARD_NAME);
     Serial.println();
-
+    
     // 初始化硬件
     Serial.println("🔧 开始硬件初始化...");
     if (!hardware_init()) {

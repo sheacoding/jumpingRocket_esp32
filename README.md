@@ -128,35 +128,66 @@ graph LR
 
 | 组件 | 型号 | 数量 | 说明 |
 |------|------|------|------|
-| 🔌 **主控板** | ESP32 DevKit | 1 | 主控制器 |
+| 🔌 **主控板** | ESP32 DevKit / ESP32-C3 DevKit | 1 | 支持多种开发板 |
 | 📡 **传感器** | MPU6050 | 1 | 6轴陀螺仪+加速度计 |
 | 🖥️ **显示屏** | SSD1306 OLED 128×64 | 1 | I2C接口 |
 | 🔊 **蜂鸣器** | 无源蜂鸣器 | 1 | PWM音效输出 |
 | 🔘 **按钮** | 轻触开关 | 1 | 用户交互 |
 | 🔋 **电源** | 锂电池/USB | 1 | 供电系统 |
 
+### 🔧 多开发板支持
+
+项目支持多种ESP32开发板，自动适配不同的引脚配置：
+
+| 开发板 | 芯片 | I2C引脚 | 按钮引脚 | 蜂鸣器引脚 | 特点 |
+|--------|------|---------|----------|------------|------|
+| **ESP32 DevKit** | ESP32 | SDA=21, SCL=22 | GPIO2 (低电平触发) | GPIO25 | 经典开发板，39个GPIO |
+| **ESP32-C3 DevKit** | ESP32-C3 | SDA=9, SCL=8 | GPIO3 (高电平触发) | GPIO4 | RISC-V架构，USB串口 |
+
 ### 🔌 接线图
 
+#### ESP32 DevKit 接线
 ```
 ESP32 DevKit    ←→    外设连接
 ─────────────────────────────────────
 GPIO 21         ←→    SDA (OLED & MPU6050)
 GPIO 22         ←→    SCL (OLED & MPU6050)
 GPIO 25         ←→    蜂鸣器正极
-GPIO 0          ←→    按钮 (高电平触发)
+GPIO 2          ←→    按钮 (低电平触发)
 3.3V            ←→    OLED & MPU6050 VCC
+GND             ←→    所有设备 GND + 按钮
+─────────────────────────────────────
+```
+
+#### ESP32-C3 DevKit 接线
+```
+ESP32-C3 DevKit ←→    外设连接
+─────────────────────────────────────
+GPIO 9          ←→    SDA (OLED & MPU6050)
+GPIO 8          ←→    SCL (OLED & MPU6050)
+GPIO 4          ←→    蜂鸣器正极
+GPIO 3          ←→    按钮 (高电平触发)
+3.3V            ←→    OLED & MPU6050 VCC + 按钮
 GND             ←→    所有设备 GND
 ─────────────────────────────────────
-注意: 按钮为高电平触发模式，需要上拉电阻
 ```
 
 ### 📐 硬件配置详情
 
+#### ESP32 DevKit 配置
 | 接口 | 引脚 | 设备 | 配置 |
 |------|------|------|------|
-| **I2C** | GPIO21(SDA), GPIO22(SCL) | OLED + MPU6050 | 100kHz时钟频率 |
+| **I2C** | GPIO21(SDA), GPIO22(SCL) | OLED + MPU6050 | 400kHz时钟频率 |
 | **PWM** | GPIO25 | 蜂鸣器 | 音效输出 |
-| **GPIO** | GPIO0 | 按钮 | 高电平触发，内置下拉 |
+| **GPIO** | GPIO2 | 按钮 | 低电平触发，内置上拉 |
+| **电源** | 3.3V, GND | 所有设备 | 共地连接 |
+
+#### ESP32-C3 DevKit 配置
+| 接口 | 引脚 | 设备 | 配置 |
+|------|------|------|------|
+| **I2C** | GPIO9(SDA), GPIO8(SCL) | OLED + MPU6050 | 100kHz时钟频率 |
+| **PWM** | GPIO4 | 蜂鸣器 | 音效输出 |
+| **GPIO** | GPIO3 | 按钮 | 高电平触发，内置下拉 |
 | **电源** | 3.3V, GND | 所有设备 | 共地连接 |
 
 ### ⚡ 安装步骤
@@ -176,22 +207,52 @@ GND             ←→    所有设备 GND
    # 搜索并安装 "PlatformIO IDE"
    ```
 
-3. **编译上传**
+3. **选择开发板**
    ```bash
-   # 编译项目
-   pio run
-   
-   # 上传到ESP32
-   pio run --target upload
-   
-   # 监控串口输出
-   pio device monitor --port COM6 --baud 115200
+   # 查看支持的开发板
+   python switch_board.py --list
+
+   # 切换到ESP32-C3 (推荐)
+   python switch_board.py esp32c3
+
+   # 切换到ESP32标准开发板
+   python switch_board.py esp32
    ```
 
-4. **开始游戏** 🎮
-   - 连接硬件按照接线图
+4. **编译上传**
+   ```bash
+   # 方法1: 使用切换脚本 (推荐)
+   python switch_board.py esp32c3 --build --upload
+
+   # 方法2: 手动指定环境
+   # ESP32-C3
+   pio run -e esp32c3dev --target upload
+
+   # ESP32标准开发板
+   pio run -e esp32dev --target upload
+
+   # 监控串口输出
+   pio device monitor -e esp32c3dev
+   ```
+
+5. **开始游戏** 🎮
+   - 连接硬件按照对应开发板的接线图
    - 上电启动，观看开机动画
    - 跳跃开始游戏！
+
+### 🔄 开发板切换工具
+
+项目提供了便捷的开发板切换工具：
+
+```bash
+# Windows用户
+switch_board.bat esp32c3 build upload
+
+# Linux/Mac用户
+python switch_board.py esp32c3 --build --upload --monitor
+```
+
+详细使用方法请参考：[多开发板配置指南](doc/BOARD_CONFIG.md)
 
 ---
 
@@ -481,10 +542,12 @@ render_frame(eased_progress);
 
 ### 📚 详细文档
 
-- 📋 [**SVG映射表**](SVG_MAPPING_TABLE.md) - UI设计到代码的精确映射
-- 🔧 [**硬件调试指南**](HARDWARE_DEBUG.md) - 硬件连接和调试方法
-- 🎨 [**UI布局指南**](UI_LAYOUT_GUIDE.md) - 界面设计和布局规范
-- 🚀 [**重构总结**](SVG_REFACTOR_FINAL.md) - 项目重构过程和成果
+- 🔧 [**多开发板配置指南**](doc/BOARD_CONFIG.md) - ESP32-C3和ESP32开发板配置切换
+- 📋 [**SVG映射表**](doc/SVG_MAPPING_TABLE.md) - UI设计到代码的精确映射
+- 🔧 [**硬件调试指南**](doc/HARDWARE_DEBUG.md) - 硬件连接和调试方法
+- 🎨 [**UI布局指南**](doc/UI_LAYOUT_GUIDE.md) - 界面设计和布局规范
+- 🚀 [**重构总结**](doc/SVG_REFACTOR_FINAL.md) - 项目重构过程和成果
+- 📊 [**多开发板配置完成报告**](doc/MULTI_BOARD_SETUP.md) - 多开发板支持系统实现详情
 
 ### 🎨 设计文件
 

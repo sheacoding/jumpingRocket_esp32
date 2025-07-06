@@ -1,5 +1,10 @@
 #include "jumping_rocket_simple.h"
 
+// V3.0 UI集成
+#ifdef JUMPING_ROCKET_V3
+#include "v3/game_integration_v3.h"
+#endif
+
 // 按钮状态定义（根据开发板自动配置）
 static uint8_t BUTTON_PRESSED;      // 按下时的电平（根据开发板配置）
 static uint8_t BUTTON_RELEASED;     // 释放时的电平（根据开发板配置）
@@ -156,13 +161,34 @@ void handle_button_event(button_event_t event) {
 
     Serial.printf("🔘 处理按钮事件: %d，当前状态: %d\n", event, current_state);
 
+#ifdef JUMPING_ROCKET_V3
+    // V3.0 UI模式按钮处理
+    if (V3_IS_IN_UI()) {
+        if (V3_HANDLE_BUTTON(event)) {
+            Serial.println("🎨 V3.0 UI处理了按钮事件");
+            return; // V3.0 UI处理了事件
+        }
+        // V3.0 UI没有处理事件，可能需要退出UI模式
+        Serial.println("🎨 V3.0 UI未处理按钮事件，退出UI模式");
+        V3_EXIT_UI();
+        return;
+    }
+#endif
+
     switch (current_state) {
         case GAME_STATE_IDLE:
-            // 待机状态下，按钮进入难度选择界面
+            // 待机状态下，按钮处理
             if (event == BUTTON_EVENT_SHORT_PRESS || event == BUTTON_EVENT_LONG_PRESS) {
+#ifdef JUMPING_ROCKET_V3
+                // V3.0模式：进入UI模式
+                Serial.println("🔘 按钮触发，进入V3.0 UI模式");
+                V3_ENTER_UI();
+#else
+                // V2.0模式：直接进入难度选择
                 Serial.println("🔘 按钮触发，进入难度选择界面");
                 current_state = GAME_STATE_DIFFICULTY_SELECT;
                 difficulty_select_init();
+#endif
             }
             break;
 

@@ -53,7 +53,8 @@ typedef enum {
     SOUND_ROCKET_LAUNCH,    // 火箭发射
     SOUND_VICTORY,          // 胜利音效
     SOUND_DIFFICULTY_SELECT, // 难度选择音效
-    SOUND_DIFFICULTY_CONFIRM // 难度确认音效
+    SOUND_DIFFICULTY_CONFIRM, // 难度确认音效
+    SOUND_TARGET_ACHIEVED   // 目标达成音效
 } sound_type_t;
 
 // 游戏数据结构
@@ -65,6 +66,17 @@ typedef struct {
     bool is_jumping;            // 是否正在跳跃
     uint32_t last_jump_time;    // 上次跳跃时间
     game_difficulty_t difficulty; // 当前游戏难度
+
+    // 目标监控相关
+    bool target_jumps_achieved;    // 跳跃目标是否已达成
+    bool target_time_achieved;     // 时间目标是否已达成
+    bool target_calories_achieved; // 卡路里目标是否已达成
+    uint32_t last_target_check_time; // 上次目标检查时间
+
+    // 目标达成提醒效果
+    bool target_flash_active;      // 屏幕闪烁是否激活
+    uint32_t target_flash_start_time; // 闪烁开始时间
+    uint32_t target_flash_duration;   // 闪烁持续时间(ms)
 } game_data_t;
 
 // 传感器数据结构
@@ -154,6 +166,17 @@ void game_resume(void);
 void game_calculate_result(void);
 void game_update_data(void);
 void game_task(void* pvParameters);
+
+// 目标监控
+void game_target_monitor_init(void);
+void game_target_monitor_check(void);
+bool is_target_enabled(void);
+float calculate_current_calories(void);
+
+// 目标达成提醒效果
+void start_target_achievement_flash(void);
+bool is_target_flash_active(void);
+bool should_screen_flash_now(void);
 
 // 难度选择相关
 void difficulty_select_init(void);

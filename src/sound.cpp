@@ -125,6 +125,32 @@ static void play_difficulty_confirm_sound(void) {
     buzzer_play_tone(784, 200); // G5
 }
 
+// 目标达成音效 - 增强版
+static void play_target_achieved_sound(void) {
+    Serial.println("音效: 目标达成 - 增强版");
+
+    // 第一段：上升音阶
+    buzzer_play_tone(523, 150); // C5
+    buzzer_play_tone(659, 150); // E5
+    buzzer_play_tone(784, 150); // G5
+    buzzer_play_tone(1047, 200); // C6
+    delay(50);
+
+    // 第二段：胜利号角
+    buzzer_play_tone(1047, 300); // C6
+    buzzer_play_tone(880, 150);  // A5
+    buzzer_play_tone(1047, 300); // C6
+    delay(100);
+
+    // 第三段：欢快结尾
+    buzzer_play_tone(659, 100); // E5
+    buzzer_play_tone(784, 100); // G5
+    buzzer_play_tone(880, 100); // A5
+    buzzer_play_tone(1047, 100); // C6
+    buzzer_play_tone(1175, 100); // D6
+    buzzer_play_tone(1319, 400); // E6 - 高音结尾
+}
+
 // 音效任务
 void sound_task(void* pvParameters) {
     Serial.println("音效任务启动");
@@ -183,6 +209,10 @@ void sound_task(void* pvParameters) {
 
                 case SOUND_DIFFICULTY_CONFIRM:
                     play_difficulty_confirm_sound();
+                    break;
+
+                case SOUND_TARGET_ACHIEVED:
+                    play_target_achieved_sound();
                     break;
 
                 default:

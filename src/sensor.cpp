@@ -1,5 +1,10 @@
 #include "jumping_rocket_simple.h"
 
+// V3.0 集成
+#ifdef JUMPING_ROCKET_V3
+#include "v3/game_integration_v3.h"
+#endif
+
 // Adafruit MPU6050对象
 Adafruit_MPU6050 mpu;
 
@@ -280,6 +285,11 @@ void sensor_task(void* pvParameters) {
 
                     Serial.printf("⬆️ 跳跃计数: %lu，时间: %lu ms\n",
                                  game_data.jump_count, millis());
+
+#ifdef JUMPING_ROCKET_V3
+                    // V3.0跳跃检测事件
+                    V3_ON_JUMP_DETECTED(game_data.jump_count, game_data.game_time_ms);
+#endif
                 }
             }
         } else {

@@ -1,5 +1,10 @@
 #include "jumping_rocket_simple.h"
 
+// V3.0 UI集成
+#ifdef JUMPING_ROCKET_V3
+#include "v3/game_integration_v3.h"
+#endif
+
 // U8g2显示对象 - 使用I2C接口的SSD1306
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 
@@ -648,6 +653,13 @@ void oled_display_game_screen(void) {
 
     u8g2.clearBuffer();
 
+    // 检查是否需要屏幕闪烁效果
+    if (is_target_flash_active() && !should_screen_flash_now()) {
+        // 闪烁状态：不显示内容，只显示空白屏幕
+        u8g2.sendBuffer();
+        return;
+    }
+
     // 顶部状态栏（上移到屏幕顶部边缘，避免双色分界线）
 
     // 时间显示（移到屏幕顶部）
@@ -1120,7 +1132,9 @@ void oled_display_difficulty_select_screen(void) {
 
     u8g2.clearBuffer();
 
-    // 闪烁边框效果（与暂停界面类似）
+    // 移除顶部横线和边框效果
+    // 注释掉原来的闪烁边框代码
+    /*
     uint32_t border_cycle = millis() % 1000; // 1秒周期
     float border_t = border_cycle / 1000.0f;
     float border_opacity = 0.3f + 0.7f * (0.5f + 0.5f * sin(border_t * 2 * PI)); // 0.3-1.0变化
@@ -1130,22 +1144,24 @@ void oled_display_difficulty_select_screen(void) {
         u8g2.drawFrame(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
         u8g2.drawFrame(1, 1, SCREEN_WIDTH-2, SCREEN_HEIGHT-2);
     }
+    */
 
-    // 标题图标和文字（上移，为选项预留空间）
+    // 标题图标和文字（上移12个单位）
     int gear_x = (SCREEN_WIDTH - 8) / 2;  // 8px图标居中
-    int gear_y = 10;  // 上移到10px
+    int gear_y = 10 - 12;  // 上移12个单位：10 - 12 = -2px（如果为负数则设为0）
+    if (gear_y < 0) gear_y = 0;
     draw_icon(gear_x, gear_y, icon_gear);
 
     u8g2.setFont(FONT_MEDIUM);
     const char* title = "SELECT DIFFICULTY";
     int title_width = u8g2.getStrWidth(title);
     int title_x = (SCREEN_WIDTH - title_width) / 2;  // 精确居中
-    int title_y = 22;  // 标题位置22px
+    int title_y = 22 - 12;  // 上移12个单位：22 - 12 = 10px
     u8g2.drawStr(title_x, title_y, title);
 
     // 三个难度选项的横向布局（选中项闪烁效果）
     const char* difficulties[] = {"Easy", "Normal", "Hard"};
-    int option_y = 40;  // 选项统一Y位置
+    int option_y = 40 - 12;  // 选项统一Y位置，上移12个单位：40 - 12 = 28px
     int total_width = SCREEN_WIDTH - 20;  // 可用宽度（左右各留10px边距）
     int option_width = total_width / 3;   // 每个选项的宽度
     int start_x = 10;  // 起始X位置
@@ -1180,7 +1196,30 @@ void oled_display_difficulty_select_screen(void) {
         }
     }
 
-    // 移除底部操作提示，让界面更简洁
+    // 添加选中难度的详细信息显示（放在屏幕底部）
+    if (selected_difficulty >= 0 && selected_difficulty < 3) {
+        u8g2.setFont(FONT_TINY);  // 使用最小字体
+
+        // 根据选中的难度显示相应信息
+        const char* detail_info = "";
+        switch (selected_difficulty) {
+            case DIFFICULTY_EASY:
+                detail_info = "60% fuel to launch";
+                break;
+            case DIFFICULTY_NORMAL:
+                detail_info = "80% fuel to launch";
+                break;
+            case DIFFICULTY_HARD:
+                detail_info = "100% fuel to launch";
+                break;
+        }
+
+        // 计算文字宽度并居中显示
+        int detail_width = u8g2.getStrWidth(detail_info);
+        int detail_x = (SCREEN_WIDTH - detail_width) / 2;
+        int detail_y = 57;  // 调整位置确保文字完整显示：64 - 7 = 57px（预留足够空间）
+        u8g2.drawStr(detail_x, detail_y, detail_info);
+    }
 
     u8g2.sendBuffer();
 }
@@ -1217,9 +1256,27 @@ void display_task(void* pvParameters) {
             last_display_state = current_state;
         }
 
+        // V3.0 UI模式检查
+#ifdef JUMPING_ROCKET_V3
+        if (V3_IS_IN_UI()) {
+            // V3.0 UI模式渲染
+            V3_RENDER_UI();
+            delay(100); // 10FPS更新
+            continue;
+        }
+#endif
+
         // 根据状态显示对应界面
         switch (current_state) {
             case GAME_STATE_IDLE:
+#ifdef JUMPING_ROCKET_V3
+                // 在待机状态检查是否应该进入V3.0 UI模式
+                if (V3_SHOULD_ENTER_UI()) {
+                    Serial.println("🎨 从待机状态进入V3.0 UI模式");
+                    V3_ENTER_UI();
+                    continue;
+                }
+#endif
                 oled_display_idle_screen();
                 break;
 

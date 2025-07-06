@@ -77,10 +77,17 @@ bool buzzer_init(void) {
     return true;
 }
 
-// 按钮初始化（修正为高电平触发按钮）
+// 按钮初始化（根据开发板自动配置）
 bool button_init(void) {
-    pinMode(BUTTON_PIN, INPUT_PULLDOWN);  // 改为下拉电阻，默认低电平
-    Serial.println("按钮初始化成功（高电平触发模式）");
+    uint8_t pin, pull_mode, active_level;
+    board_get_button_config(&pin, &pull_mode, &active_level);
+
+    pinMode(pin, pull_mode);
+
+    const char* trigger_mode = (active_level == HIGH) ? "高电平触发" : "低电平触发";
+    const char* pull_mode_str = (pull_mode == INPUT_PULLUP) ? "上拉" : "下拉";
+
+    Serial.printf("按钮初始化成功 (GPIO%d, %s电阻, %s)\n", pin, pull_mode_str, trigger_mode);
     return true;
 }
 
@@ -90,20 +97,17 @@ bool hardware_init(void) {
     Serial.println("蹦跳小火箭 V2.0 - 硬件初始化开始");
     Serial.println("========================================");
 
-    // 显示引脚配置
-    Serial.println("引脚配置:");
-    Serial.printf("  I2C SCL: GPIO%d\n", I2C_SCL_PIN);
-    Serial.printf("  I2C SDA: GPIO%d\n", I2C_SDA_PIN);
-    Serial.printf("  按钮:    GPIO%d\n", BUTTON_PIN);
-    Serial.printf("  蜂鸣器:  GPIO%d\n", BUZZER_PIN);
+    // 初始化开发板配置
+    board_config_init();
     Serial.println();
 
     // 初始化I2C
     Serial.println("初始化I2C总线...");
     Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
-    Wire.setClock(100000); // 设置为100kHz，提高兼容性
+    uint32_t i2c_freq = board_get_i2c_frequency();
+    Wire.setClock(i2c_freq);
     delay(100);
-    Serial.println("I2C总线初始化完成");
+    Serial.printf("I2C总线初始化完成 (频率: %d Hz)\n", i2c_freq);
 
     // 扫描I2C设备
     i2c_scan();

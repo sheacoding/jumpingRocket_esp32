@@ -1,5 +1,12 @@
 #include "jumping_rocket_simple.h"
 
+// V3.0 集成
+#ifdef JUMPING_ROCKET_V3
+#include "v3/game_integration_v3.h"
+#include "v3/data_manager_v3.h"
+#include "v3/data_models_v3.h"
+#endif
+
 // 全局游戏状态和数据
 game_state_t current_state = GAME_STATE_IDLE;
 game_data_t game_data = {0};
@@ -11,6 +18,10 @@ game_difficulty_t selected_difficulty = DIFFICULTY_NORMAL; // 默认普通难度
 void game_data_init(void) {
     memset(&game_data, 0, sizeof(game_data_t));
     game_data.difficulty = DIFFICULTY_NORMAL; // 设置默认难度
+
+    // 初始化目标监控状态
+    game_target_monitor_init();
+
     Serial.printf("游戏数据初始化，默认难度: %s\n", get_difficulty_name(game_data.difficulty));
 }
 
@@ -56,6 +67,11 @@ void game_reset(void) {
     current_state = GAME_STATE_IDLE;
 
     Serial.printf("游戏重置完成，保持难度: %s\n", get_difficulty_name(game_data.difficulty));
+
+#ifdef JUMPING_ROCKET_V3
+    // V3.0游戏重置事件
+    V3_ON_GAME_RESET();
+#endif
 }
 
 // 游戏开始
@@ -82,6 +98,11 @@ void game_start(void) {
     Serial.printf("   游戏开始时间: %lu ms\n", game_start_time);
     Serial.printf("   初始跳跃计数: %lu\n", game_data.jump_count);
     Serial.printf("   暂停时间重置: %lu ms\n", total_pause_time);
+
+#ifdef JUMPING_ROCKET_V3
+    // V3.0游戏开始事件
+    V3_ON_GAME_START(existing_difficulty);
+#endif
 }
 
 // 游戏暂停
@@ -104,8 +125,13 @@ void game_pause(void) {
     
     // 播放暂停音效
     play_sound_effect(SOUND_PAUSE);
-    
+
     Serial.println("游戏已暂停");
+
+#ifdef JUMPING_ROCKET_V3
+    // V3.0游戏暂停事件
+    V3_ON_GAME_PAUSE();
+#endif
 }
 
 // 游戏继续
@@ -128,8 +154,13 @@ void game_resume(void) {
     
     // 播放继续音效
     play_sound_effect(SOUND_RESUME);
-    
+
     Serial.println("游戏已继续");
+
+#ifdef JUMPING_ROCKET_V3
+    // V3.0游戏恢复事件
+    V3_ON_GAME_RESUME();
+#endif
 }
 
 // 计算燃料进度（严格按照跳跃充能）
@@ -173,6 +204,11 @@ void game_calculate_result(void) {
     if (game_data.flight_height >= 5000) { // 提高胜利音效触发门槛
         play_sound_effect(SOUND_VICTORY);
     }
+
+#ifdef JUMPING_ROCKET_V3
+    // V3.0游戏完成事件
+    V3_ON_GAME_COMPLETE();
+#endif
 }
 
 // 更新游戏数据
@@ -259,6 +295,9 @@ void game_state_machine(void) {
         case GAME_STATE_PLAYING:
             // 游戏进行中，更新数据
             game_update_data();
+
+            // 检查目标达成情况
+            game_target_monitor_check();
 
             // 检查是否应该启动火箭发射
             if (should_start_rocket_launch()) {
@@ -400,4 +439,142 @@ const char* get_difficulty_name(game_difficulty_t difficulty) {
         default:
             return "Normal";
     }
+}
+
+// ==================== 目标监控功能 ====================
+
+// 目标监控初始化
+void game_target_monitor_init(void) {
+    game_data.target_jumps_achieved = false;
+    game_data.target_time_achieved = false;
+    game_data.target_calories_achieved = false;
+    game_data.last_target_check_time = millis();
+
+    // 初始化闪烁效果状态
+    game_data.target_flash_active = false;
+    game_data.target_flash_start_time = 0;
+    game_data.target_flash_duration = 3000; // 3秒闪烁
+
+    Serial.println("目标监控初始化完成");
+}
+
+// 检查目标是否启用
+bool is_target_enabled(void) {
+#ifdef JUMPING_ROCKET_V3
+    // 从V3系统获取目标设置
+    extern DataManagerV3 dataManagerV3;
+    if (dataManagerV3.isInitialized()) {
+        return dataManagerV3.getTargetSettings().enabled;
+    }
+#endif
+    return false; // V3系统未启用或未初始化时禁用目标
+}
+
+// 计算当前卡路里消耗
+float calculate_current_calories(void) {
+    // 基于跳跃次数和时间计算卡路里
+    // 这里使用简化的计算公式
+    float calories_per_jump = 0.5f; // 每次跳跃消耗0.5卡路里
+    float calories_per_minute = 5.0f; // 每分钟基础消耗5卡路里
+
+    float jump_calories = game_data.jump_count * calories_per_jump;
+    float time_calories = (game_data.game_time_ms / 1000.0f / 60.0f) * calories_per_minute;
+
+    return jump_calories + time_calories;
+}
+
+// 目标监控检查
+void game_target_monitor_check(void) {
+    // 限制检查频率，每500ms检查一次
+    uint32_t current_time = millis();
+    if (current_time - game_data.last_target_check_time < 500) {
+        return;
+    }
+    game_data.last_target_check_time = current_time;
+
+    // 检查目标是否启用
+    if (!is_target_enabled()) {
+        return;
+    }
+
+    // 从V3系统获取目标设置
+#ifdef JUMPING_ROCKET_V3
+    extern DataManagerV3 dataManagerV3;
+    if (!dataManagerV3.isInitialized()) {
+        return;
+    }
+
+    const TargetSettingsV3& target_settings = dataManagerV3.getTargetSettings();
+    uint32_t target_jumps = target_settings.target_jumps;
+    uint32_t target_time = target_settings.target_time;
+    float target_calories = target_settings.target_calories;
+#else
+    // V3系统未启用时使用默认目标值
+    uint32_t target_jumps = 50;      // 目标跳跃次数
+    uint32_t target_time = 30;       // 目标时间(秒)
+    float target_calories = 30.0f;   // 目标卡路里
+#endif
+
+    // 检查跳跃目标
+    if (!game_data.target_jumps_achieved && game_data.jump_count >= target_jumps) {
+        game_data.target_jumps_achieved = true;
+        Serial.printf("🎯 跳跃目标达成! 当前: %d, 目标: %d\n", game_data.jump_count, target_jumps);
+        start_target_achievement_flash();
+        play_sound_effect(SOUND_TARGET_ACHIEVED);
+    }
+
+    // 检查时间目标
+    uint32_t current_time_seconds = game_data.game_time_ms / 1000;
+    if (!game_data.target_time_achieved && current_time_seconds >= target_time) {
+        game_data.target_time_achieved = true;
+        Serial.printf("🎯 时间目标达成! 当前: %d秒, 目标: %d秒\n", current_time_seconds, target_time);
+        start_target_achievement_flash();
+        play_sound_effect(SOUND_TARGET_ACHIEVED);
+    }
+
+    // 检查卡路里目标
+    float current_calories = calculate_current_calories();
+    if (!game_data.target_calories_achieved && current_calories >= target_calories) {
+        game_data.target_calories_achieved = true;
+        Serial.printf("🎯 卡路里目标达成! 当前: %.1f, 目标: %.1f\n", current_calories, target_calories);
+        start_target_achievement_flash();
+        play_sound_effect(SOUND_TARGET_ACHIEVED);
+    }
+}
+
+// ==================== 目标达成提醒效果 ====================
+
+// 启动目标达成屏幕闪烁效果
+void start_target_achievement_flash(void) {
+    game_data.target_flash_active = true;
+    game_data.target_flash_start_time = millis();
+    Serial.println("🌟 启动目标达成屏幕闪烁效果");
+}
+
+// 检查屏幕闪烁是否激活
+bool is_target_flash_active(void) {
+    if (!game_data.target_flash_active) {
+        return false;
+    }
+
+    // 检查闪烁是否超时
+    uint32_t elapsed = millis() - game_data.target_flash_start_time;
+    if (elapsed >= game_data.target_flash_duration) {
+        game_data.target_flash_active = false;
+        Serial.println("🌟 目标达成闪烁效果结束");
+        return false;
+    }
+
+    return true;
+}
+
+// 检查当前时刻是否应该显示闪烁
+bool should_screen_flash_now(void) {
+    if (!is_target_flash_active()) {
+        return false;
+    }
+
+    // 快速闪烁：每200ms切换一次显示状态
+    uint32_t elapsed = millis() - game_data.target_flash_start_time;
+    return (elapsed / 200) % 2 == 0;
 }

@@ -1,5 +1,19 @@
 #include "jumping_rocket_simple.h"
 
+// V3.0 功能集成
+#ifdef JUMPING_ROCKET_V3
+#include "v3/board_config_v3.h"
+#include "v3/game_integration_v3.h"
+#include "v3/ui_views_v3.h"
+
+// V3.0 外部函数声明
+extern bool initializeV3System();
+extern void loopV3();
+extern void testV3System();
+extern void printV3SystemInfo();
+extern void shutdownV3System();
+#endif
+
 // 任务句柄
 TaskHandle_t sensor_task_handle = NULL;
 TaskHandle_t display_task_handle = NULL;
@@ -16,19 +30,33 @@ extern "C" {
 }
 
 void setup() {
+    #ifdef UART_RX_PIN
+    Serial.begin(115200, SERIAL_8N1, UART_RX_PIN, UART_TX_PIN);
+    #else
     Serial.begin(115200);
+    #endif
+    
     delay(2000); // 等待串口稳定
     Serial.println("\n\n========================================");
-    Serial.println("蹦跳小火箭 V2.0 启动");
+    Serial.println("🚀 蹦跳小火箭 V2.0 启动 - 调试模式");
     Serial.println("========================================");
+    Serial.println("检查串口通信是否正常...");
 
     // 显示系统信息
     Serial.printf("ESP32 芯片型号: %s\n", ESP.getChipModel());
     Serial.printf("芯片版本: %d\n", ESP.getChipRevision());
     Serial.printf("CPU频率: %d MHz\n", ESP.getCpuFreqMHz());
     Serial.printf("空闲堆内存: %d bytes\n", ESP.getFreeHeap());
-    Serial.println();
+    Serial.printf("开发板类型: %s\n", BOARD_NAME);
 
+#ifdef JUMPING_ROCKET_V3
+    Serial.printf("🚀 V3.0功能: 启用\n");
+    Serial.printf("   版本: %s\n", JUMPING_ROCKET_VERSION_STRING);
+#else
+    Serial.printf("🚀 V3.0功能: 禁用 (V2.0模式)\n");
+#endif
+    Serial.println();
+    
     // 初始化硬件
     Serial.println("🔧 开始硬件初始化...");
     if (!hardware_init()) {
@@ -38,6 +66,34 @@ void setup() {
             Serial.println("系统已停止，请检查硬件连接");
         }
     }
+
+#ifdef JUMPING_ROCKET_V3
+    // 初始化V3.0系统
+    Serial.println("🔧 初始化V3.0系统...");
+    if (!initializeV3System()) {
+        Serial.println("❌ V3.0系统初始化失败，继续使用V2.0模式");
+    } else {
+        Serial.println("✅ V3.0系统初始化成功");
+
+        // 运行V3.0系统测试
+        Serial.println("🧪 运行V3.0系统测试...");
+        testV3System();
+
+        // 显示V3.0系统信息
+        printV3SystemInfo();
+
+        // 初始化V3.0游戏集成
+        Serial.println(" 初始化V3.0游戏集成...");
+        if (initGameIntegrationV3()) {
+            Serial.println("✅ V3.0游戏集成初始化成功");
+        } else {
+            Serial.println("❌ V3.0游戏集成初始化失败");
+        }
+
+        // 检查V3.0兼容性
+        checkV3Compatibility();
+    }
+#endif
 
     // 初始化数据处理器
     Serial.println("📊 初始化数据处理器...");
@@ -135,4 +191,19 @@ void loop() {
     }
     
     delay(1000); // 1秒检查一次
+
+#ifdef JUMPING_ROCKET_V3
+    // V3.0主循环处理
+    loopV3();
+
+    // V3.0 UI模式检查和处理
+    if (V3_SHOULD_ENTER_UI()) {
+        V3_ENTER_UI();
+    }
+
+    // V3.0 UI模式更新
+    if (V3_IS_IN_UI()) {
+        V3_UPDATE_UI();
+    }
+#endif
 }

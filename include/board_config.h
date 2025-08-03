@@ -10,11 +10,11 @@
     
     // ESP32-C3 引脚配置
     #ifndef I2C_SCL_PIN
-    #define I2C_SCL_PIN                 8     // I2C SCL引脚
+    #define I2C_SCL_PIN                 9     // I2C SCL引脚
     #endif
     
     #ifndef I2C_SDA_PIN
-    #define I2C_SDA_PIN                 9     // I2C SDA引脚
+    #define I2C_SDA_PIN                 8     // I2C SDA引脚
     #endif
     
     #ifndef BUTTON_PIN

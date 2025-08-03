@@ -431,13 +431,13 @@ uint32_t get_difficulty_fuel_threshold(game_difficulty_t difficulty) {
 const char* get_difficulty_name(game_difficulty_t difficulty) {
     switch (difficulty) {
         case DIFFICULTY_EASY:
-            return "Easy";
+            return "简单";
         case DIFFICULTY_NORMAL:
-            return "Normal";
+            return "普通";
         case DIFFICULTY_HARD:
-            return "Hard";
+            return "困难";
         default:
-            return "Normal";
+            return "普通";
     }
 }
 

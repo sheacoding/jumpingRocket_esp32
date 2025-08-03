@@ -81,7 +81,7 @@ private:
     void updateSelection(int direction);
     void renderMenuItems();
     void renderStatusBar();
-    void drawMenuItemWithBlink(const String& text, int y, bool selected);
+    void drawMenuItemWithBlinkCentered(const String& text, int y, bool selected);
 };
 
 // 难度选择视图

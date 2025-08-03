@@ -28,12 +28,21 @@
 
 // 游戏状态枚举
 typedef enum {
-    GAME_STATE_IDLE,        // 待机状态
-    GAME_STATE_PLAYING,     // 游戏中
-    GAME_STATE_PAUSED,      // 暂停状态
-    GAME_STATE_RESET_CONFIRM, // 重置确认
-    GAME_STATE_RESULT       // 结算状态
+    GAME_STATE_IDLE,              // 待机状态
+    GAME_STATE_DIFFICULTY_SELECT, // 难度选择
+    GAME_STATE_PLAYING,           // 游戏中
+    GAME_STATE_PAUSED,            // 暂停状态
+    GAME_STATE_RESET_CONFIRM,     // 重置确认
+    GAME_STATE_LAUNCHING,         // 火箭发射
+    GAME_STATE_RESULT             // 结算状态
 } game_state_t;
+
+// 游戏难度枚举
+typedef enum {
+    DIFFICULTY_EASY = 0,    // 简单：60%燃料发射
+    DIFFICULTY_NORMAL = 1,  // 普通：80%燃料发射
+    DIFFICULTY_HARD = 2     // 困难：100%燃料发射
+} game_difficulty_t;
 
 // 按钮事件枚举
 typedef enum {
@@ -77,6 +86,7 @@ typedef struct {
 extern game_state_t current_state;
 extern game_data_t game_data;
 extern sensor_data_t sensor_data;
+extern game_difficulty_t selected_difficulty;
 
 // 函数声明
 
@@ -104,6 +114,14 @@ void oled_display_pause_screen(void);
 void oled_display_reset_confirm_screen(void);
 void oled_display_result_screen(void);
 void display_task(void* pvParameters);
+
+// 中文显示相关
+void oled_display_chinese_text(int x, int y, const char* text, const uint8_t* font);
+void oled_display_mixed_text(int x, int y, const char* text, const uint8_t* font);
+void oled_display_chinese_tiny(int x, int y, const char* text);
+void oled_display_chinese_small(int x, int y, const char* text);
+void oled_display_chinese_medium(int x, int y, const char* text);
+void oled_display_chinese_large(int x, int y, const char* text);
 
 // 音效相关
 void buzzer_play_tone(int frequency, int duration_ms);

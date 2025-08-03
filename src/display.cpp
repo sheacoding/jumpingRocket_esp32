@@ -1,4 +1,5 @@
 #include "jumping_rocket_simple.h"
+#include "u8g2_wqy.h"  // 添加中文字体支持
 
 // V3.0 UI集成
 #ifdef JUMPING_ROCKET_V3
@@ -30,12 +31,27 @@ static game_state_t last_display_state = GAME_STATE_IDLE;
 #define ROCKET_LAUNCH_DURATION      2000  // 火箭发射动画持续时间(ms)
 #define TRANSITION_DURATION         150   // 界面切换动画持续时间(ms)
 
-// 字体定义 - 针对128x64优化
+// 字体定义 - 针对128x64优化，添加中文字体支持
+// 英文字体（保持兼容性）
 #define FONT_TINY     u8g2_font_4x6_tf        // 4x6像素，用于小标签
 #define FONT_SMALL    u8g2_font_6x10_tf       // 6x10像素，用于数值
 #define FONT_MEDIUM   u8g2_font_7x13_tf       // 7x13像素，用于标题
 #define FONT_LARGE    u8g2_font_10x20_tf      // 10x20像素，用于大数字
 #define FONT_TITLE    u8g2_font_ncenB12_tf    // 12像素粗体，用于主标题
+#define FONT_XLARGE   u8g2_font_ncenB14_tf    // 14像素超大字体，用于结算界面时间
+#define FONT_XXLARGE  u8g2_font_ncenB18_tf    // 18像素巨大字体，用于结算界面重要数据
+
+// 中文字体定义 - 根据显示区域优化尺寸
+#define FONT_CHINESE_TINY     u8g2_font_wqy12_t_gb2312a    // 12像素中文，用于小标签和提示
+#define FONT_CHINESE_SMALL    u8g2_font_wqy13_t_gb2312a    // 13像素中文，用于数值标签
+#define FONT_CHINESE_MEDIUM   u8g2_font_wqy14_t_gb2312a    // 14像素中文，用于主要文本
+#define FONT_CHINESE_LARGE    u8g2_font_wqy15_t_gb2312a    // 15像素中文，用于标题
+
+// 中英文混合显示的字体选择宏
+#define FONT_MIXED_TINY       FONT_CHINESE_TINY     // 中英文混合小字体
+#define FONT_MIXED_SMALL      FONT_CHINESE_SMALL    // 中英文混合小字体
+#define FONT_MIXED_MEDIUM     FONT_CHINESE_MEDIUM   // 中英文混合中字体
+#define FONT_MIXED_LARGE      FONT_CHINESE_LARGE    // 中英文混合大字体
 
 // SVG-to-U8g2映射标准
 #define SCREEN_WIDTH  128
@@ -212,10 +228,41 @@ void oled_clear(void) {
     u8g2.clearBuffer();
 }
 
-// 显示文本
+// 显示文本（自动选择合适字体）
 void oled_display_text(int x, int y, const char* text) {
     if (!display_initialized || !text) return;
     u8g2.drawStr(x, y, text);
+}
+
+// 显示中文文本（指定字体）
+void oled_display_chinese_text(int x, int y, const char* text, const uint8_t* font) {
+    if (!display_initialized || !text || !font) return;
+    u8g2.setFont(font);
+    u8g2.drawUTF8(x, y, text);
+}
+
+// 显示中英文混合文本（使用中文字体）
+void oled_display_mixed_text(int x, int y, const char* text, const uint8_t* font) {
+    if (!display_initialized || !text || !font) return;
+    u8g2.setFont(font);
+    u8g2.drawUTF8(x, y, text);
+}
+
+// 便捷的中文文本显示函数
+void oled_display_chinese_tiny(int x, int y, const char* text) {
+    oled_display_chinese_text(x, y, text, FONT_CHINESE_TINY);
+}
+
+void oled_display_chinese_small(int x, int y, const char* text) {
+    oled_display_chinese_text(x, y, text, FONT_CHINESE_SMALL);
+}
+
+void oled_display_chinese_medium(int x, int y, const char* text) {
+    oled_display_chinese_text(x, y, text, FONT_CHINESE_MEDIUM);
+}
+
+void oled_display_chinese_large(int x, int y, const char* text) {
+    oled_display_chinese_text(x, y, text, FONT_CHINESE_LARGE);
 }
 
 // 绘制8x8图标
@@ -404,20 +451,33 @@ void oled_display_boot_animation(void) {
 
         // 火箭图标（上移，为下方元素预留更多空间）
         int rocket_x = (SCREEN_WIDTH - 16) / 2;  // 精确居中
-        int rocket_y = 18;  // 上移到18px位置
+        int rocket_y = 8;  // 上移到18px位置
         draw_large_icon(rocket_x, rocket_y, icon_rocket_large);
 
-        // "ROCKET"文字（重新定位，确保与三个点有足够间距）
+        // "蹦跳火箭"中文文字（重新计算布局，确保不超出边界且与其他元素不重叠）
         uint32_t text_cycle = millis() % 1000; // 直接使用millis()，1秒周期
         float text_opacity = 0.5f + 0.5f * sin(text_cycle * 2 * PI / 1000.0f);
 
         if (svg_opacity_visible(text_opacity, 0)) {
-            u8g2.setFont(FONT_SMALL); // FONT_SMALL高度约10像素
-            const char* rocket_text = "ROCKET";
-            int text_width = u8g2.getStrWidth(rocket_text);
+            u8g2.setFont(FONT_CHINESE_SMALL); // 使用中文小字体 (13px)
+            const char* rocket_text = "蹦跳火箭";
+            int text_width = u8g2.getUTF8Width(rocket_text);
+            
+            // 检查文字是否会超出屏幕边界
+            if (text_width > SCREEN_WIDTH - 4) {
+                // 如果太宽，使用更小的字体
+                u8g2.setFont(FONT_CHINESE_TINY);
+                text_width = u8g2.getUTF8Width(rocket_text);
+            }
+            
             int text_x = (SCREEN_WIDTH - text_width) / 2; // 精确居中
-            int text_y = 42;  // 重新定位到42px，为三个点预留空间
-            u8g2.drawStr(text_x, text_y, rocket_text);
+            int text_y = 32;  // 调整到40px，为三个点预留更多空间
+            
+            // 确保不超出边界
+            if (text_x < 2) text_x = 2;
+            if (text_x + text_width > SCREEN_WIDTH - 2) text_x = SCREEN_WIDTH - text_width - 2;
+            
+            u8g2.drawUTF8(text_x, text_y, rocket_text);
         }
 
         // 三个进度指示点（实心点依次移动的波浪式动画）
@@ -430,8 +490,8 @@ void oled_display_boot_animation(void) {
         uint32_t elapsed_time = current_millis - animation_start_time;
         uint32_t dot_cycle = elapsed_time % 1500; // 1.5秒周期
 
-        // 计算三个点的Y位置，确保与ROCKET文字有足够间距
-        int dots_y = 56;  // 距离ROCKET文字底部4像素 (42+10+4=56)
+        // 计算三个点的Y位置，确保与中文文字有足够间距
+        int dots_y = 54;  // 距离中文文字底部足够像素 (40+13+5=58)
 
         // 计算当前活跃点的位置（0=第1个点，1=第2个点，2=第3个点）
         // 每个点持续500ms，总周期1.5秒
@@ -603,7 +663,7 @@ void oled_display_rocket_launch_animation(void) {
 
         // ALTITUDE标签（右侧，确保与高度数字完全分离）
         u8g2.setFont(FONT_TINY);  // 4x6像素字体，高度6像素
-        const char* alt_label = "ALTITUDE";
+        const char* alt_label = "高度";
         int label_width = u8g2.getStrWidth(alt_label);
         int label_x = SCREEN_WIDTH - label_width - 3; // 与高度数字对齐
         int label_y = 37; // 距离高度字体底部2像素 (15+20+2=37)
@@ -663,37 +723,35 @@ void oled_display_game_screen(void) {
     // 顶部状态栏（上移到屏幕顶部边缘，避免双色分界线）
 
     // 时间显示（移到屏幕顶部）
-    u8g2.setFont(FONT_SMALL); // 从FONT_TINY升级到FONT_SMALL（增大50%）
+    u8g2.setFont(FONT_MEDIUM); // 从FONT_SMALL升级到FONT_MEDIUM（放大0.8倍）
     uint32_t total_seconds = game_data.game_time_ms / 1000;
     uint32_t minutes = total_seconds / 60;
     uint32_t seconds = total_seconds % 60;
     char time_text[16];
     snprintf(time_text, sizeof(time_text), "%02lu:%02lu", minutes, seconds);
     int time_x = 2;  // 靠近左边缘
-    int time_y = 8;  // 上移到屏幕顶部（字体高度约8像素）
+    int time_y = 10;  // 下移到10px，为FONT_MEDIUM字体预留更多空间
     u8g2.drawStr(time_x, time_y, time_text);
 
     // 跳跃计数（移到屏幕顶部）
-    u8g2.setFont(FONT_SMALL); // 从FONT_TINY升级到FONT_SMALL（增大50%）
+    u8g2.setFont(FONT_MEDIUM); // 从FONT_SMALL升级到FONT_MEDIUM（放大0.8倍）
     char count_text[16];
     snprintf(count_text, sizeof(count_text), "%lu", game_data.jump_count);
 
     // 计算跳跃次数的宽度，右对齐显示
     int count_width = u8g2.getStrWidth(count_text);
     int count_x = SCREEN_WIDTH - count_width - 2; // 靠近右边缘，留2像素边距
-    int count_y = 8;  // 与时间对齐在屏幕顶部
+    int count_y = 10;  // 与时间对齐，下移到10px适应更大字体
     u8g2.drawStr(count_x, count_y, count_text);
 
     // 移除状态栏分割线
 
-    // 火箭图标（确保始终显示，增强可见性）
-    int rocket_x = svg_transform_x(-4, 20); // 8x8图标居中
-    int rocket_y = svg_transform_y(-4, 32);
+    // 火箭图标（重新定位到屏幕正中心）
+    int rocket_x = (SCREEN_WIDTH - 8) / 2;  // 水平居中：(128-8)/2 = 60
+    int rocket_y = (SCREEN_HEIGHT - 8) / 2; // 垂直居中：(64-8)/2 = 28
 
-    // 绘制火箭图标，确保可见
+    // 绘制火箭图标，位于屏幕正中心
     draw_icon(rocket_x, rocket_y, icon_rocket_small);
-
-    // 火箭图标应该在坐标(16, 28)附近显示
 
     // 跳跃反馈波纹动画（只在检测到跳跃时触发一次）
     if (game_data.is_jumping && !jump_animation_active) {
@@ -711,9 +769,9 @@ void oled_display_game_screen(void) {
         } else {
             float t = (float)elapsed / JUMP_ANIMATION_DURATION;
 
-            // 第一层波纹（基于SVG animate r="5;15" dur="0.5s"）
-            int center_x = svg_transform_x(0, 20);
-            int center_y = svg_transform_y(0, 32);
+            // 第一层波纹（波纹中心与小火箭图标位置同步）
+            int center_x = rocket_x + 4;  // 火箭图标中心：rocket_x + 8/2 = rocket_x + 4
+            int center_y = rocket_y + 4;  // 火箭图标中心：rocket_y + 8/2 = rocket_y + 4
             int radius1 = 5 + (int)(10 * t); // 5-15像素
 
             // 绘制第一层波纹
@@ -726,7 +784,7 @@ void oled_display_game_screen(void) {
                 }
             }
 
-            // 第二层波纹（基于SVG animate r="8;20" dur="0.5s" begin="0.1s"）
+            // 第二层波纹（中心位置同步）
             if (elapsed >= 100) { // 延迟0.1秒
                 float t2 = (float)(elapsed - 100) / (JUMP_ANIMATION_DURATION - 100);
                 int radius2 = 8 + (int)(12 * t2); // 8-20像素
@@ -744,30 +802,33 @@ void oled_display_game_screen(void) {
         }
     }
 
-    // 燃料进度条区域（重新布局避免重叠）
-    u8g2.setFont(FONT_TINY);
+    // 燃料区域（整体下移到距离屏幕下边缘5px位置）
+    int fuel_area_y = SCREEN_HEIGHT - 5 - 12; // 64 - 5 - 12 = 47px，为燃料区域预留12px高度
+    
+    // 计算整体宽度（文本+间距+进度条）
+    u8g2.setFont(FONT_CHINESE_TINY);
+    const char* fuel_label = "燃料";
+    int fuel_label_width = u8g2.getUTF8Width(fuel_label);
+    int bar_width = 98;  // 进度条宽度
+    int spacing = 6;     // 文本与进度条间距
+    int total_width = fuel_label_width + spacing + bar_width;
+    
+    // 整体水平居中
+    int start_x = (SCREEN_WIDTH - total_width) / 2;
+    
+    // "燃料"标签（水平对齐）
+    int fuel_label_x = start_x;
+    int fuel_label_y = fuel_area_y+6;  // 上移4像素
+    u8g2.drawUTF8(fuel_label_x, fuel_label_y, fuel_label);
 
-    // FUEL标签（左侧）
-    int fuel_label_x = svg_transform_x(0, 35);
-    int fuel_label_y = svg_transform_y(0, 20);
-    u8g2.drawStr(fuel_label_x, fuel_label_y, "FUEL");
-
-    // 百分比显示（右侧，与标签同行）
-    char fuel_text[8];
-    snprintf(fuel_text, sizeof(fuel_text), "%lu%%", game_data.fuel_progress);
-    int fuel_pct_x = svg_transform_x(0, 100);  // 右侧显示
-    int fuel_pct_y = svg_transform_y(0, 20);   // 与标签同行
-    u8g2.drawStr(fuel_pct_x, fuel_pct_y, fuel_text);
-
-    // 进度条（使用固定像素值，确保计算准确）
-    int bar_x = 35;                           // 固定X坐标
-    int bar_y = 28;                           // 固定Y坐标
-    int bar_width = 80;                       // 固定宽度80像素
-    int bar_height = 6;                       // 固定高度6像素
+    // 进度条（与文本水平对齐）
+    int bar_x = start_x + fuel_label_width + spacing;
+    int bar_y = fuel_area_y + 8;              // 在文字下方8px
+    int bar_height = 8;                       // 高度4px，更紧凑
     u8g2.drawFrame(bar_x, bar_y, bar_width, bar_height);
 
-    // 进度条填充（确保100%时完全填满）
-    int available_width = bar_width - 2;     // 78像素可用宽度
+    // 进度条填充
+    int available_width = bar_width - 2;     // 58像素可用宽度
     int fill_width = (available_width * game_data.fuel_progress) / 100;
 
     // 确保100%时完全填满
@@ -775,27 +836,66 @@ void oled_display_game_screen(void) {
         fill_width = available_width;
     }
 
-    // 调试输出进度条计算
-    static uint32_t last_debug_fuel = 999;
-    if (game_data.fuel_progress != last_debug_fuel) {
-        Serial.printf("📊 进度条: 燃料=%lu%%, 可用宽度=%d, 填充宽度=%d\n",
-                     game_data.fuel_progress, available_width, fill_width);
-        last_debug_fuel = game_data.fuel_progress;
-    }
-
     if (fill_width > 0) {
         u8g2.drawBox(bar_x + 1, bar_y + 1, fill_width, bar_height - 2);
     }
 
-    // 底部提示（基于SVG两个text元素）
-    u8g2.setFont(FONT_TINY);
-    int hint1_x = svg_transform_x(0, 5);
-    int hint1_y = svg_transform_y(0, 55);
-    u8g2.drawStr(hint1_x, hint1_y, "Press: Pause");
+    // 调试输出燃料区域布局
+    static bool fuel_debug_printed = false;
+    if (!fuel_debug_printed) {
+        Serial.printf("⛽ 燃料区域重新布局: 标签(%d,%d) 进度条(%d,%d,%dx%d)\n",
+                     fuel_label_x, fuel_label_y, bar_x, bar_y, bar_width, bar_height);
+        Serial.printf("📐 燃料区域: 距离屏幕底部5px，总高度12px (47-59px)\n");
+        fuel_debug_printed = true;
+    }
 
-    int hint2_x = svg_transform_x(0, 75);
-    int hint2_y = svg_transform_y(0, 55);
-    u8g2.drawStr(hint2_x, hint2_y, "Hold: Reset");
+    // 移除底部按键提示，按照用户要求去掉页面上的按键提示信息
+    // 原来的按键提示代码已注释掉
+    /*
+    u8g2.setFont(FONT_CHINESE_TINY);
+    
+    const char* hint1 = "按键:暂停";
+    const char* hint2 = "长按:重置";
+    
+    int hint1_width = u8g2.getUTF8Width(hint1);
+    int hint2_width = u8g2.getUTF8Width(hint2);
+    
+    int hint_y = svg_transform_y(0, 55);
+    
+    // 计算两个提示的位置，确保不重叠
+    int total_width = hint1_width + hint2_width + 6; // 加6px间距
+    
+    if (total_width <= SCREEN_WIDTH - 4) {
+        // 如果能放在一行，左右分布
+        int hint1_x = 2;
+        int hint2_x = SCREEN_WIDTH - hint2_width - 2;
+        
+        // 检查是否重叠
+        if (hint1_x + hint1_width + 6 > hint2_x) {
+            // 重叠时，调整为上下分布
+            hint1_x = (SCREEN_WIDTH - hint1_width) / 2;
+            hint_y -= 8;
+            u8g2.drawUTF8(hint1_x, hint_y, hint1);
+            
+            hint2_x = (SCREEN_WIDTH - hint2_width) / 2;
+            hint_y += 8;
+            u8g2.drawUTF8(hint2_x, hint_y, hint2);
+        } else {
+            // 不重叠，正常显示
+            u8g2.drawUTF8(hint1_x, hint_y, hint1);
+            u8g2.drawUTF8(hint2_x, hint_y, hint2);
+        }
+    } else {
+        // 太宽，必须上下分布
+        int hint1_x = (SCREEN_WIDTH - hint1_width) / 2;
+        int hint2_x = (SCREEN_WIDTH - hint2_width) / 2;
+        
+        hint_y -= 6;
+        u8g2.drawUTF8(hint1_x, hint_y, hint1);
+        hint_y += 10;
+        u8g2.drawUTF8(hint2_x, hint_y, hint2);
+    }
+    */
 
     u8g2.sendBuffer();
 }
@@ -823,13 +923,13 @@ void oled_display_pause_screen(void) {
     int pause_icon_y = 12;  // 上移到12px
     draw_icon(pause_icon_x, pause_icon_y, icon_pause);
 
-    // "PAUSED"文字（上移，确保与边框和底部文字有足够间距）
-    u8g2.setFont(FONT_MEDIUM);
-    const char* title = "PAUSED";
-    int title_width = u8g2.getStrWidth(title);
+    // "已暂停"中文文字（上移，确保与边框和底部文字有足够间距）
+    u8g2.setFont(FONT_CHINESE_MEDIUM);
+    const char* title = "已暂停";
+    int title_width = u8g2.getUTF8Width(title);
     int title_x = (SCREEN_WIDTH - title_width) / 2;  // 精确居中
     int title_y = 24;  // 上移到24px
-    u8g2.drawStr(title_x, title_y, title);
+    u8g2.drawUTF8(title_x, title_y, title);
 
     // 统计信息三列布局（上移，确保与边框有足够间距）
     u8g2.setFont(FONT_SMALL);
@@ -841,9 +941,9 @@ void oled_display_pause_screen(void) {
     int jump_y = 36;  // 上移到36px
     u8g2.drawStr(jump_x, jump_y, jump_text);
 
-    u8g2.setFont(FONT_TINY);
+    u8g2.setFont(FONT_CHINESE_TINY);
     int jump_label_y = 44;  // 标签位置44px
-    u8g2.drawStr(jump_x, jump_label_y, "JUMPS");
+    u8g2.drawUTF8(jump_x, jump_label_y, "跳跃");
 
     // 第二列：游戏时长（中央）
     uint32_t total_seconds = game_data.game_time_ms / 1000;
@@ -858,11 +958,11 @@ void oled_display_pause_screen(void) {
     int time_y = 36;  // 与跳跃次数对齐
     u8g2.drawStr(time_x, time_y, time_text);
 
-    u8g2.setFont(FONT_TINY);
-    const char* time_label = "TIME";
-    int time_label_width = u8g2.getStrWidth(time_label);
+    u8g2.setFont(FONT_CHINESE_TINY);
+    const char* time_label = "时间";
+    int time_label_width = u8g2.getUTF8Width(time_label);
     int time_label_x = (SCREEN_WIDTH - time_label_width) / 2;  // 标签居中
-    u8g2.drawStr(time_label_x, jump_label_y, time_label);
+    u8g2.drawUTF8(time_label_x, jump_label_y, time_label);
 
     // 第三列：燃料进度（右侧）
     u8g2.setFont(FONT_SMALL);
@@ -873,19 +973,22 @@ void oled_display_pause_screen(void) {
     int fuel_y = 36;  // 与其他数据对齐
     u8g2.drawStr(fuel_x, fuel_y, fuel_text);
 
-    u8g2.setFont(FONT_TINY);
-    const char* fuel_label = "FUEL";
-    int fuel_label_width = u8g2.getStrWidth(fuel_label);
+    u8g2.setFont(FONT_CHINESE_TINY);
+    const char* fuel_label = "燃料";
+    int fuel_label_width = u8g2.getUTF8Width(fuel_label);
     int fuel_label_x = SCREEN_WIDTH - fuel_label_width - 15;  // 与数据对齐
-    u8g2.drawStr(fuel_label_x, jump_label_y, fuel_label);
+    u8g2.drawUTF8(fuel_label_x, jump_label_y, fuel_label);
 
-    // 底部操作提示（修改为更清晰的操作说明）
-    u8g2.setFont(FONT_TINY);
-    const char* hint = "Press:Resume  Hold:Reset";
-    int hint_width = u8g2.getStrWidth(hint);
+    // 移除按键提示，按照用户要求去掉页面上的按键提示信息
+    // 注释掉原来的按键提示代码
+    /*
+    u8g2.setFont(FONT_CHINESE_TINY);
+    const char* hint = "按键:继续  长按:重置";
+    int hint_width = u8g2.getUTF8Width(hint);
     int hint_x = (SCREEN_WIDTH - hint_width) / 2;  // 精确居中
     int hint_y = 54;  // 上移到54px，距离底部边框10px
-    u8g2.drawStr(hint_x, hint_y, hint);
+    u8g2.drawUTF8(hint_x, hint_y, hint);
+    */
 
     u8g2.sendBuffer();
 }
@@ -912,29 +1015,46 @@ void oled_display_reset_confirm_screen(void) {
     int warning_y = 14;  // 上移到14px
     draw_icon(warning_x, warning_y, icon_warning);
 
-    // "RESET?"文字（上移，确保与边框和底部文字有足够间距）
-    u8g2.setFont(FONT_MEDIUM);
-    const char* title = "RESET?";
-    int title_width = u8g2.getStrWidth(title);
+    // "重置?"中文文字（上移，确保与边框和底部文字有足够间距）
+    u8g2.setFont(FONT_CHINESE_MEDIUM);
+    const char* title = "重置?";
+    int title_width = u8g2.getUTF8Width(title);
+    
+    // 检查是否超出边界
+    if (title_width > SCREEN_WIDTH - 4) {
+        u8g2.setFont(FONT_CHINESE_SMALL);
+        title_width = u8g2.getUTF8Width(title);
+    }
+    
     int title_x = (SCREEN_WIDTH - title_width) / 2;  // 精确居中
+    if (title_x < 2) title_x = 2;
+    if (title_x + title_width > SCREEN_WIDTH - 2) title_x = SCREEN_WIDTH - title_width - 2;
+    
     int title_y = 26;  // 上移到26px
-    u8g2.drawStr(title_x, title_y, title);
+    u8g2.drawUTF8(title_x, title_y, title);
 
-    // 闪烁警告文字（上移，确保与其他元素有足够间距）
+    // 闪烁警告文字（改为中文，确保与其他元素有足够间距）
     uint32_t text_cycle = millis() % 800; // 0.8秒周期
     float text_t = text_cycle / 800.0f;
     float text_opacity = 0.5f + 0.5f * sin(text_t * 2 * PI);
 
     if (svg_opacity_visible(text_opacity, 100)) {
-        u8g2.setFont(FONT_TINY);
-        const char* warning = "All progress lost!";
-        int warning_width = u8g2.getStrWidth(warning);
+        u8g2.setFont(FONT_CHINESE_TINY);
+        const char* warning = "所有进度将丢失!";
+        int warning_width = u8g2.getUTF8Width(warning);
         int warning_x = (SCREEN_WIDTH - warning_width) / 2;  // 精确居中
+        
+        // 确保不超出边界
+        if (warning_x < 2) warning_x = 2;
+        if (warning_x + warning_width > SCREEN_WIDTH - 2) warning_x = SCREEN_WIDTH - warning_width - 2;
+        
         int warning_y = 36;  // 上移到36px
-        u8g2.drawStr(warning_x, warning_y, warning);
+        u8g2.drawUTF8(warning_x, warning_y, warning);
     }
 
-    // 操作说明（上移，确保与边框有足够间距）
+    // 移除操作说明，按照用户要求去掉页面上的按键提示信息
+    // 注释掉原来的操作说明代码
+    /*
     u8g2.setFont(FONT_TINY);
 
     // 确认操作（上移）
@@ -950,6 +1070,7 @@ void oled_display_reset_confirm_screen(void) {
     int cancel_x = (SCREEN_WIDTH - cancel_width) / 2;  // 精确居中
     int cancel_y = 54;  // 上移到54px，距离底部边框10px
     u8g2.drawStr(cancel_x, cancel_y, cancel);
+    */
 
     u8g2.sendBuffer();
 }
@@ -972,76 +1093,83 @@ void oled_display_result_screen(void) {
     draw_icon(rocket_x, rocket_y, icon_rocket_small);
 
     // === 时间标签区域（移到原标题位置） ===
-    // "EXERCISE TIME"标签（移到原COMPLETE!位置）
-    u8g2.setFont(FONT_SMALL);  // 使用小字体
-    const char* time_label = "EXERCISE TIME";
-    int time_label_width = u8g2.getStrWidth(time_label);
+    // "运动时间"标签（上移4px以保证底部显示完整）
+    u8g2.setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+    const char* time_label = "运动时间";
+    int time_label_width = u8g2.getUTF8Width(time_label);
     int time_label_x = (SCREEN_WIDTH - time_label_width) / 2;
-    int time_label_y = 15;  // 移到原COMPLETE!的位置15px
-    u8g2.drawStr(time_label_x, time_label_y, time_label);
+    int time_label_y = 11;  // 从15px上移4px到11px
+    u8g2.drawUTF8(time_label_x, time_label_y, time_label);
 
     // === 时间显示区域（重新调整） ===
-    // 健身时长（主要功能，使用大字体突出显示）
+    // 健身时长（主要功能，使用超大字体突出显示 - 放大一倍）
     uint32_t total_seconds = game_data.game_time_ms / 1000;
     uint32_t minutes = total_seconds / 60;
     uint32_t seconds = total_seconds % 60;
 
-    u8g2.setFont(FONT_LARGE);  // 使用大字体突出时间
+    u8g2.setFont(FONT_XXLARGE);  // 从FONT_LARGE升级到FONT_XXLARGE（放大一倍）
     char time_text[16];
     snprintf(time_text, sizeof(time_text), "%02lu:%02lu", minutes, seconds);
     int time_width = u8g2.getStrWidth(time_text);
     int time_x = (SCREEN_WIDTH - time_width) / 2;
-    int time_y = 28;  // 保持在28px位置
+    int time_y = 21;  // 从25px上移4px到21px
     u8g2.drawStr(time_x, time_y, time_text);
 
     // === 底部统计区域（移除按键提示，重新调整布局） ===
-    u8g2.setFont(FONT_TINY);  // 统一使用小字体
-
-    // 第一列：跳跃次数（左侧）
+    
+    // 第一列：跳跃次数（左侧） - 放大一倍
+    u8g2.setFont(FONT_MEDIUM);  // 从FONT_TINY升级到FONT_MEDIUM（放大一倍）
     char jump_text[16];
     snprintf(jump_text, sizeof(jump_text), "%lu", game_data.jump_count);
     int jump_x = 8;   // 左侧边距8px
-    int jump_y = 45;  // 下移到45px，为上方内容预留更多空间
+    int jump_y = 38;  // 从42px上移4px到38px
     u8g2.drawStr(jump_x, jump_y, jump_text);
-    u8g2.drawStr(jump_x, 55, "JUMPS");  // 标签位置55px
+    
+    u8g2.setFont(FONT_CHINESE_TINY);  // 使用中文小字体
+    u8g2.drawUTF8(jump_x, 51, "跳跃");  // 标签位置从55px上移4px到51px
 
     // 第二列：飞行高度（中央）
+    u8g2.setFont(FONT_MEDIUM);  // 与跳跃次数保持一致的字体大小
     char height_text[16];
     snprintf(height_text, sizeof(height_text), "%lum", game_data.flight_height);
     int height_width = u8g2.getStrWidth(height_text);
     int height_x = (SCREEN_WIDTH - height_width) / 2;  // 居中
-    int height_y = 45;  // 与跳跃次数对齐
+    int height_y = 38;  // 从42px上移4px到38px，与跳跃次数对齐
     u8g2.drawStr(height_x, height_y, height_text);
 
     // 高度标签居中对齐
-    const char* height_label = "ALTITUDE";
-    int height_label_width = u8g2.getStrWidth(height_label);
+    u8g2.setFont(FONT_CHINESE_TINY);  // 使用中文小字体
+    const char* height_label = "高度";
+    int height_label_width = u8g2.getUTF8Width(height_label);
     int height_label_x = (SCREEN_WIDTH - height_label_width) / 2;
-    u8g2.drawStr(height_label_x, 55, height_label);
+    u8g2.drawUTF8(height_label_x, 51, height_label);  // 从55px上移4px到51px
 
     // 第三列：燃料使用（右侧）
+    u8g2.setFont(FONT_MEDIUM);  // 与跳跃次数保持一致的字体大小
     char fuel_text[8];
     snprintf(fuel_text, sizeof(fuel_text), "%lu%%", game_data.fuel_progress);
     int fuel_width = u8g2.getStrWidth(fuel_text);
     int fuel_x = SCREEN_WIDTH - fuel_width - 8;  // 右侧边距8px
-    int fuel_y = 45;  // 与其他统计数据对齐
+    int fuel_y = 38;  // 从42px上移4px到38px，与其他统计数据对齐
     u8g2.drawStr(fuel_x, fuel_y, fuel_text);
 
     // 燃料标签右对齐
-    const char* fuel_label = "FUEL";
-    int fuel_label_width = u8g2.getStrWidth(fuel_label);
+    u8g2.setFont(FONT_CHINESE_TINY);  // 使用中文小字体
+    const char* fuel_label = "燃料";
+    int fuel_label_width = u8g2.getUTF8Width(fuel_label);
     int fuel_label_x = SCREEN_WIDTH - fuel_label_width - 8;
-    u8g2.drawStr(fuel_label_x, 55, fuel_label);
+    u8g2.drawUTF8(fuel_label_x, 51, fuel_label);  // 从55px上移4px到51px
 
     // 添加布局调试信息
     static bool layout_debug_printed = false;
     if (!layout_debug_printed) {
-        Serial.printf("🏆 结算界面布局优化: 移除COMPLETE!，EXERCISE TIME上移\n");
-        Serial.printf("   图标区域: 奖杯(5,2) 火箭(115,2)\n");
-        Serial.printf("   时间标签: EXERCISE TIME (%d,15) - 移到原标题位置\n", time_label_x);
-        Serial.printf("   时间: %s (%d,28) - 大字体突出显示\n", time_text, time_x);
-        Serial.printf("   统计数据: (45px) 标签: (55px)\n");
-        Serial.printf("   垂直分布: 图标2px, 时间标签15px, 时间28px, 统计45px, 标签55px\n");
+        Serial.printf("🏆 结算界面布局优化: 整体上移4px，保证底部显示完整\n");
+        Serial.printf("   图标区域: 奖杯(5,2) 火箭(115,2) - 保持不变\n");
+        Serial.printf("   时间标签: 运动时间 (%d,11) - 上移4px\n", time_label_x);
+        Serial.printf("   时间: %s (%d,21) - 上移4px\n", time_text, time_x);
+        Serial.printf("   统计数据: (38px) 上移4px\n");
+        Serial.printf("   中文标签: (51px) 上移4px\n");
+        Serial.printf("   垂直分布: 图标2px, 时间标签11px, 时间21px, 统计38px, 标签51px\n");
         layout_debug_printed = true;
     }
 
@@ -1054,24 +1182,39 @@ void oled_display_idle_screen(void) {
 
     u8g2.clearBuffer();
 
-    // 顶部状态栏
-    u8g2.setFont(FONT_TINY);
+    // 顶部状态栏 - 检查中文文字布局
+    u8g2.setFont(FONT_CHINESE_TINY);
+    const char* status_text = "准备就绪";
+    int status_width = u8g2.getUTF8Width(status_text);
+    
+    // 确保不超出屏幕边界
     int status_text_x = 5;
+    if (status_text_x + status_width > SCREEN_WIDTH - 5) {
+        status_text_x = SCREEN_WIDTH - status_width - 5;
+    }
     int status_text_y = 9;
-    u8g2.drawStr(status_text_x, status_text_y, "READY");
+    u8g2.drawUTF8(status_text_x, status_text_y, status_text);
 
     // 中央火箭图标（重新定位，避免与任何其他元素重叠）
     int rocket_x = (SCREEN_WIDTH - 16) / 2;  // 水平居中
     int rocket_y = 24;  // 垂直居中位置
     draw_large_icon(rocket_x, rocket_y, icon_rocket_large);
 
-    // 提示文字（确保在底部有足够空间）
-    u8g2.setFont(FONT_SMALL);
-    const char* hint = "Jump to Start";
-    int hint_width = u8g2.getStrWidth(hint);
+    // 提示文字（确保在底部有足够空间且不超出边界）
+    u8g2.setFont(FONT_CHINESE_SMALL);
+    const char* hint = "跳跃开始";
+    int hint_width = u8g2.getUTF8Width(hint);
     int hint_x = (SCREEN_WIDTH - hint_width) / 2;
+    
+    // 确保不超出屏幕边界
+    if (hint_x < 2) hint_x = 2;
+    if (hint_x + hint_width > SCREEN_WIDTH - 2) hint_x = SCREEN_WIDTH - hint_width - 2;
+    
     int hint_y = 50;  // 底部位置，确保不与其他元素重叠
-    u8g2.drawStr(hint_x, hint_y, hint);
+    // 检查是否会超出屏幕底部
+    if (hint_y + 4 > SCREEN_HEIGHT) hint_y = SCREEN_HEIGHT - 6;
+    
+    u8g2.drawUTF8(hint_x, hint_y, hint);
 
     // 注意：移除所有可能导致重叠的元素
     // 不绘制"ROCKET"文字
@@ -1152,15 +1295,27 @@ void oled_display_difficulty_select_screen(void) {
     if (gear_y < 0) gear_y = 0;
     draw_icon(gear_x, gear_y, icon_gear);
 
-    u8g2.setFont(FONT_MEDIUM);
-    const char* title = "SELECT DIFFICULTY";
-    int title_width = u8g2.getStrWidth(title);
+    u8g2.setFont(FONT_CHINESE_MEDIUM);
+    const char* title = "选择难度";
+    int title_width = u8g2.getUTF8Width(title);
+    
+    // 检查标题是否会超出屏幕边界
+    if (title_width > SCREEN_WIDTH - 4) {
+        // 如果太宽，使用更小的字体
+        u8g2.setFont(FONT_CHINESE_SMALL);
+        title_width = u8g2.getUTF8Width(title);
+    }
+    
     int title_x = (SCREEN_WIDTH - title_width) / 2;  // 精确居中
+    // 确保不超出边界
+    if (title_x < 2) title_x = 2;
+    if (title_x + title_width > SCREEN_WIDTH - 2) title_x = SCREEN_WIDTH - title_width - 2;
+    
     int title_y = 22 - 12;  // 上移12个单位：22 - 12 = 10px
-    u8g2.drawStr(title_x, title_y, title);
+    u8g2.drawUTF8(title_x, title_y, title);
 
     // 三个难度选项的横向布局（选中项闪烁效果）
-    const char* difficulties[] = {"Easy", "Normal", "Hard"};
+    const char* difficulties[] = {"简单", "普通", "困难"};
     int option_y = 40 - 12;  // 选项统一Y位置，上移12个单位：40 - 12 = 28px
     int total_width = SCREEN_WIDTH - 20;  // 可用宽度（左右各留10px边距）
     int option_width = total_width / 3;   // 每个选项的宽度
@@ -1179,46 +1334,60 @@ void oled_display_difficulty_select_screen(void) {
         int option_center_x = start_x + i * option_width + option_width / 2;
 
         // 计算文字宽度以居中显示
-        u8g2.setFont(FONT_SMALL);
-        int text_width = u8g2.getStrWidth(diff_name);
+        u8g2.setFont(FONT_CHINESE_SMALL);
+        int text_width = u8g2.getUTF8Width(diff_name);
         int text_x = option_center_x - text_width / 2;
+        
+        // 确保不超出分配的区域边界
+        int min_x = start_x + i * option_width + 2;
+        int max_x = start_x + (i + 1) * option_width - text_width - 2;
+        if (text_x < min_x) text_x = min_x;
+        if (text_x > max_x) text_x = max_x;
 
         // 选中项的文字闪烁效果
         if (is_selected) {
             // 使用透明度控制文字闪烁显示
             if (svg_opacity_visible(blink_opacity, 0)) {
                 // 绘制难度名称（选中时闪烁显示）
-                u8g2.drawStr(text_x, option_y, diff_name);
+                u8g2.drawUTF8(text_x, option_y, diff_name);
             }
         } else {
             // 非选中项正常显示
-            u8g2.drawStr(text_x, option_y, diff_name);
+            u8g2.drawUTF8(text_x, option_y, diff_name);
         }
     }
 
     // 添加选中难度的详细信息显示（放在屏幕底部）
     if (selected_difficulty >= 0 && selected_difficulty < 3) {
-        u8g2.setFont(FONT_TINY);  // 使用最小字体
+        u8g2.setFont(FONT_CHINESE_TINY);  // 使用最小字体
 
         // 根据选中的难度显示相应信息
         const char* detail_info = "";
         switch (selected_difficulty) {
             case DIFFICULTY_EASY:
-                detail_info = "60% fuel to launch";
+                detail_info = "燃料60%发射";
                 break;
             case DIFFICULTY_NORMAL:
-                detail_info = "80% fuel to launch";
+                detail_info = "燃料80%发射";
                 break;
             case DIFFICULTY_HARD:
-                detail_info = "100% fuel to launch";
+                detail_info = "燃料100%发射";
                 break;
         }
 
-        // 计算文字宽度并居中显示
-        int detail_width = u8g2.getStrWidth(detail_info);
+        // 计算文字宽度并居中显示，确保不超出边界
+        int detail_width = u8g2.getUTF8Width(detail_info);
         int detail_x = (SCREEN_WIDTH - detail_width) / 2;
+        
+        // 确保不超出屏幕边界
+        if (detail_x < 2) detail_x = 2;
+        if (detail_x + detail_width > SCREEN_WIDTH - 2) detail_x = SCREEN_WIDTH - detail_width - 2;
+        
         int detail_y = 57;  // 调整位置确保文字完整显示：64 - 7 = 57px（预留足够空间）
-        u8g2.drawStr(detail_x, detail_y, detail_info);
+        // 检查是否会超出屏幕底部
+        if (detail_y + 4 > SCREEN_HEIGHT) detail_y = SCREEN_HEIGHT - 6;
+        
+        u8g2.drawUTF8(detail_x, detail_y, detail_info);
     }
 
     u8g2.sendBuffer();

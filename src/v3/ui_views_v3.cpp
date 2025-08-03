@@ -2,12 +2,18 @@
 #include "v3/data_manager_v3.h"
 #include "jumping_rocket_simple.h"
 
+// 中文字体定义 - 与V2.0系统保持一致
+#define FONT_CHINESE_TINY     u8g2_font_wqy12_t_gb2312a    // 12像素中文
+#define FONT_CHINESE_SMALL    u8g2_font_wqy13_t_gb2312a    // 13像素中文  
+#define FONT_CHINESE_MEDIUM   u8g2_font_wqy14_t_gb2312a    // 14像素中文
+#define FONT_CHINESE_LARGE    u8g2_font_wqy15_t_gb2312a    // 15像素中文
+
 // 全局UI管理器实例
 UIManagerV3* uiManagerV3 = nullptr;
 
 // UIViewV3 基类实现
 void UIViewV3::drawTitle(const String& title, int y) {
-    display->setFont(u8g2_font_6x10_tf);
+    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
     int width = display->getUTF8Width(title.c_str());
     int x = (128 - width) / 2;
     display->drawUTF8(x, y, title.c_str());
@@ -15,7 +21,7 @@ void UIViewV3::drawTitle(const String& title, int y) {
 }
 
 void UIViewV3::drawMenuItem(const String& text, int y, bool selected) {
-    display->setFont(u8g2_font_6x10_tf);
+    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
 
     if (selected) {
         // 文字闪烁效果：每500ms切换一次显示状态
@@ -45,15 +51,30 @@ void UIViewV3::drawProgressBar(int x, int y, int width, int height, float progre
 }
 
 void UIViewV3::drawValue(const String& label, const String& value, int y) {
-    display->setFont(u8g2_font_6x10_tf);
+    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+    
+    // 检查标签宽度，避免与数值重叠
+    int label_width = display->getUTF8Width(label.c_str());
+    int value_width = display->getUTF8Width(value.c_str());
+    
+    // 确保标签和数值之间至少有8像素间距
+    int max_label_width = 128 - value_width - 8 - 4; // 4是左边距
+    
+    if (label_width > max_label_width) {
+        // 标签太长，使用更小的字体
+        display->setFont(FONT_CHINESE_TINY);
+        label_width = display->getUTF8Width(label.c_str());
+    }
+    
     display->drawUTF8(4, y, label.c_str());
     
-    int value_width = display->getUTF8Width(value.c_str());
+    // 重新设置字体显示数值
+    display->setFont(FONT_CHINESE_SMALL);
     display->drawUTF8(124 - value_width, y, value.c_str());
 }
 
 void UIViewV3::drawCenteredText(const String& text, int y) {
-    display->setFont(u8g2_font_6x10_tf);
+    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
     int width = display->getUTF8Width(text.c_str());
     int x = (128 - width) / 2;
     display->drawUTF8(x, y, text.c_str());
@@ -67,10 +88,10 @@ MainMenuViewV3::MainMenuViewV3(U8G2* disp) :
 
 void MainMenuViewV3::initMenuItems() {
     menu_items.clear();
-    menu_items.push_back(MenuItemV3("Start Exercise", "", UI_VIEW_DIFFICULTY_SELECT));
-    menu_items.push_back(MenuItemV3("History", "", UI_VIEW_HISTORY));
-    menu_items.push_back(MenuItemV3("Target Timer", "", UI_VIEW_TARGET_TIMER));
-    menu_items.push_back(MenuItemV3("Settings", "", UI_VIEW_SETTINGS));
+    menu_items.push_back(MenuItemV3("开始运动", "", UI_VIEW_DIFFICULTY_SELECT));
+    menu_items.push_back(MenuItemV3("历史记录", "", UI_VIEW_HISTORY));
+    menu_items.push_back(MenuItemV3("目标计时", "", UI_VIEW_TARGET_TIMER));
+    menu_items.push_back(MenuItemV3("系统设置", "", UI_VIEW_SETTINGS));
 }
 
 void MainMenuViewV3::enter() {
@@ -96,11 +117,11 @@ void MainMenuViewV3::update() {
 
 void MainMenuViewV3::render() {
     if (!active) {
-        Serial.println("Main menu view not active");
+        Serial.println("❌ Main menu view not active");
         return;
     }
 
-    Serial.println("Rendering main menu view");
+    Serial.println("🎨 Rendering V3.0 main menu with Chinese items");
     display->clearBuffer();
 
     // 绘制菜单项 (不再绘制标题)
@@ -110,29 +131,39 @@ void MainMenuViewV3::render() {
     // renderStatusBar();
 
     display->sendBuffer();
-    Serial.println("Main menu rendering completed");
+    Serial.println("✅ Main menu rendering completed");
 }
 
 void MainMenuViewV3::renderMenuItems() {
-    int start_y = 12;  // 进一步上移起始位置
-    int item_height = 12;  // 减小间距，让4个选项更紧凑
+    // 调整布局：4个菜单项从屏幕上方开始，确保所有文字完整显示
+    // 从顶部留出适当边距，确保"系统设置"文字完整显示
+    int start_y = 2;  // 从顶部16px开始，留出足够上边距
+    int item_spacing = 15;  // 减少间距以适应屏幕高度，每项占12px
 
-    Serial.printf("Rendering menu items, total: %d, selected: %d\n", menu_items.size(), selected_index);
+    Serial.printf("🎨 Rendering menu items, start_y=%d, spacing=%d\n", start_y, item_spacing);
 
     for (int i = 0; i < menu_items.size() && i < 4; i++) {
-        int y = start_y + i * item_height;
+        int y = start_y + i * item_spacing;
         bool selected = (i == selected_index);
 
-        Serial.printf("Rendering menu item %d: %s (y=%d, selected=%s)\n",
+        Serial.printf("📝 Rendering Chinese menu item %d: '%s' (y=%d, selected=%s)\n",
                      i, menu_items[i].title.c_str(), y, selected ? "yes" : "no");
 
-        // 使用闪烁效果绘制选中项
-        drawMenuItemWithBlink(menu_items[i].title, y, selected);
+        // 使用闪烁效果绘制选中项，并水平居中
+        drawMenuItemWithBlinkCentered(menu_items[i].title, y, selected);
     }
 }
 
-void MainMenuViewV3::drawMenuItemWithBlink(const String& text, int y, bool selected) {
-    display->setFont(u8g2_font_6x10_tf);
+void MainMenuViewV3::drawMenuItemWithBlinkCentered(const String& text, int y, bool selected) {
+    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+    
+    // 计算文字宽度以实现水平居中
+    int text_width = display->getUTF8Width(text.c_str());
+    int x = (128 - text_width) / 2;  // 水平居中
+    
+    // 确保不超出屏幕边界
+    if (x < 2) x = 2;
+    if (x + text_width > 126) x = 126 - text_width;
 
     if (selected) {
         // 文字闪烁效果：每500ms切换一次显示状态
@@ -140,13 +171,13 @@ void MainMenuViewV3::drawMenuItemWithBlink(const String& text, int y, bool selec
         bool blink_state = (current_time / 500) % 2 == 0;
 
         if (blink_state) {
-            // 显示文字
-            display->drawUTF8(4, y, text.c_str());
+            // 显示文字（居中）
+            display->drawUTF8(x, y, text.c_str());
         }
         // 不显示状态时什么都不画，实现闪烁效果
     } else {
-        // 非选中项正常显示
-        display->drawUTF8(4, y, text.c_str());
+        // 非选中项正常显示（居中）
+        display->drawUTF8(x, y, text.c_str());
     }
 }
 
@@ -244,7 +275,7 @@ void DifficultySelectViewV3::render() {
         renderConfirmation();
     } else {
         // 绘制标题（上移12个单位）
-        drawTitle("Select Difficulty", 12 - 12);  // 12 - 12 = 0
+        drawTitle("选择难度", 12 - 12);  // 12 - 12 = 0
 
         // 绘制难度选项
         renderDifficultyOptions();
@@ -258,45 +289,81 @@ void DifficultySelectViewV3::render() {
 
 void DifficultySelectViewV3::renderDifficultyOptions() {
     int start_y = 25 - 12;  // 上移12个单位：25 - 12 = 13
-    int item_height = 12;
+    int item_height = 11;
 
     for (int i = 0; i < DIFFICULTY_COUNT; i++) {
         int y = start_y + i * item_height;
         bool selected = (i == (int)selected_difficulty);
 
         const difficulty_config_t* config = V3Config::getDifficultyConfig((game_difficulty_t)i);
-        String text = String(config->name_en) + " (" + String((int)(config->multiplier * 100)) + "%)";
+        // 使用中文难度名称
+        String difficulty_name;
+        switch((game_difficulty_t)i) {
+            case DIFFICULTY_EASY: difficulty_name = "简单"; break;
+            case DIFFICULTY_NORMAL: difficulty_name = "普通"; break;
+            case DIFFICULTY_HARD: difficulty_name = "困难"; break;
+            default: difficulty_name = "普通"; break;
+        }
+        String text = difficulty_name + " (" + String((int)(config->multiplier * 100)) + "%)";
 
-        drawMenuItem(text, y, selected);
+        // 使用居中显示的菜单项
+        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+        int text_width = display->getUTF8Width(text.c_str());
+        int x = (128 - text_width) / 2;  // 计算居中位置
+        
+        if (selected) {
+            // 选中项闪烁效果
+            uint32_t current_time = millis();
+            bool blink_state = (current_time / 500) % 2 == 0;
+            if (blink_state) {
+                display->drawUTF8(x, y, text.c_str());
+            }
+        } else {
+            // 非选中项正常显示
+            display->drawUTF8(x, y, text.c_str());
+        }
     }
 }
 
 void DifficultySelectViewV3::renderDifficultyDetails() {
     const difficulty_config_t* config = V3Config::getDifficultyConfig(selected_difficulty);
 
-    display->setFont(u8g2_font_5x7_tf);
+    display->setFont(FONT_CHINESE_TINY);  // 使用中文字体
 
-    int detail_y = 56;  // 调整位置确保文字完整显示：64 - 8 = 56px（预留足够空间）
-    String target_text = "Target: " + String(config->target_jumps) + " jumps/" + String(config->target_time) + " sec";
+    int detail_y = 52;  // 调整位置确保文字完整显示：64 - 8 = 56px（预留足够空间）
+    String target_text = "目标: " + String(config->target_jumps) + " 次/" + String(config->target_time) + " 秒";
     drawCenteredText(target_text, detail_y);
 }
 
 void DifficultySelectViewV3::renderConfirmation() {
-    drawTitle("Difficulty Selected", 12 - 12);  // 上移12个单位：12 - 12 = 0
+    drawTitle("难度已选择", 12 - 12);  // 上移12个单位：12 - 12 = 0
 
     const difficulty_config_t* config = V3Config::getDifficultyConfig(confirmed_difficulty);
 
-    display->setFont(u8g2_font_6x10_tf);
-    drawCenteredText(config->name_en, 30 - 12);  // 上移12个单位：30 - 12 = 18
+    // 使用中文难度名称
+    String difficulty_name;
+    switch(confirmed_difficulty) {
+        case DIFFICULTY_EASY: difficulty_name = "简单"; break;
+        case DIFFICULTY_NORMAL: difficulty_name = "普通"; break;
+        case DIFFICULTY_HARD: difficulty_name = "困难"; break;
+        default: difficulty_name = "普通"; break;
+    }
 
-    display->setFont(u8g2_font_5x7_tf);
-    drawCenteredText("Ready to Exercise...", 45 - 12);  // 上移12个单位：45 - 12 = 33
+    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+    drawCenteredText(difficulty_name, 30 - 12);  // 上移12个单位：30 - 12 = 18
+
+    display->setFont(FONT_CHINESE_TINY);  // 使用中文字体
+    drawCenteredText("准备运动...", 45 - 12);  // 上移12个单位：45 - 12 = 33
 
     // 绘制动画效果
+    // 移除按键提示，按照用户要求去掉页面上的按键提示信息
+    // 原来的按键提示代码已注释掉
+    /*
     uint32_t elapsed = millis() - animation_time;
     if ((elapsed / 500) % 2 == 0) {
-        drawCenteredText("Press to Start", 58 - 12);  // 上移12个单位：58 - 12 = 46
+        drawCenteredText("按键开始", 58 - 12);  // 上移12个单位：58 - 12 = 46
     }
+    */
 }
 
 bool DifficultySelectViewV3::handleButton(button_event_t event) {
@@ -414,57 +481,57 @@ void HistoryViewV3::loadHistoryData() {
 
 void HistoryViewV3::renderSummaryPage() {
     // 绘制无横线标题
-    display->setFont(u8g2_font_6x10_tf);
-    int width = display->getUTF8Width("Fitness Summary");
+    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+    int width = display->getUTF8Width("健身总结");
     int x = (128 - width) / 2;
-    display->drawUTF8(x, 2, "Fitness Summary");  // 下移2个单位，无横线
+    display->drawUTF8(x, 2, "健身总结");  // 下移2个单位，无横线
 
     if (dataManagerV3.isInitialized()) {
         const HistoryStatsV3& stats = dataManagerV3.getHistoryStats();
 
-        display->setFont(u8g2_font_6x10_tf);
+        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
 
         // 健身导向的数据展示 - 下移2个单位
-        drawValue("Workout Days:", String(stats.streak_days), 12);
-        drawValue("Total Time:", DataUtilsV3::formatTime(stats.total_time), 22);
-        drawValue("Calories Burned:", String((int)stats.total_calories), 32);
-        drawValue("Total Jumps:", String(stats.total_jumps), 42);
+        drawValue("运动天数:", String(stats.streak_days), 12);
+        drawValue("总时长:", DataUtilsV3::formatTime(stats.total_time), 22);
+        drawValue("卡路里:", String((int)stats.total_calories), 32);
+        drawValue("跳跃数:", String(stats.total_jumps), 42);
     } else {
-        display->setFont(u8g2_font_6x10_tf);
-        drawCenteredText("Start exercising to", 17);
-        drawCenteredText("see your progress!", 29);
+        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+        drawCenteredText("开始运动来", 17);
+        drawCenteredText("查看进度!", 29);
     }
 
-    // 页面指示器
-    display->setFont(u8g2_font_5x7_tf);
-    String page_info = "Summary (" + String(current_page + 1) + "/" + String(total_pages) + ")";
-    drawCenteredText(page_info, 52);
+    // 页面指示器 - 简化显示
+    display->setFont(FONT_CHINESE_TINY);  // 使用中文字体
+    String page_info = String(current_page + 1) + "/" + String(total_pages);
+    drawCenteredText(page_info, 58);  // 下移到底部
 }
 
 void HistoryViewV3::renderWeeklyPage() {
     // 绘制无横线标题
-    display->setFont(u8g2_font_6x10_tf);
-    int width = display->getUTF8Width("This Week");
+    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+    int width = display->getUTF8Width("本周数据");
     int x = (128 - width) / 2;
-    display->drawUTF8(x, 2, "This Week");  // 下移2个单位，无横线
+    display->drawUTF8(x, 2, "本周数据");  // 下移2个单位，无横线
 
     if (dataManagerV3.isInitialized()) {
-        display->setFont(u8g2_font_6x10_tf);
+        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
 
         // 本周健身数据 - 下移2个单位
-        drawValue("Workouts:", String(dataManagerV3.getWeeklyWorkouts()), 12);
-        drawValue("Total Time:", DataUtilsV3::formatTime(dataManagerV3.getWeeklyTime()), 22);
-        drawValue("Calories:", String((int)dataManagerV3.getWeeklyCalories()), 32);
-        drawValue("Goals Met:", String(dataManagerV3.getWeeklyGoalsAchieved()), 42);
+        drawValue("次数:", String(dataManagerV3.getWeeklyWorkouts()), 12);
+        drawValue("时长:", DataUtilsV3::formatTime(dataManagerV3.getWeeklyTime()), 22);
+        drawValue("卡路里:", String((int)dataManagerV3.getWeeklyCalories()), 32);
+        drawValue("目标:", String(dataManagerV3.getWeeklyGoalsAchieved()), 42);
     } else {
-        display->setFont(u8g2_font_6x10_tf);
-        drawCenteredText("No weekly data", 22);
+        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+        drawCenteredText("暂无周数据", 22);
     }
 
-    // 页面指示器
-    display->setFont(u8g2_font_5x7_tf);
-    String page_info = "Week (" + String(current_page + 1) + "/" + String(total_pages) + ")";
-    drawCenteredText(page_info, 52);
+    // 页面指示器 - 简化显示
+    display->setFont(FONT_CHINESE_TINY);  // 使用中文字体
+    String page_info = String(current_page + 1) + "/" + String(total_pages);
+    drawCenteredText(page_info, 58);  // 下移到底部
 }
 
 void HistoryViewV3::renderHistoryPage() {
@@ -473,7 +540,7 @@ void HistoryViewV3::renderHistoryPage() {
         const DailyDataV3& daily_data = history_data[data_index];
 
         // 绘制无横线标题
-        display->setFont(u8g2_font_6x10_tf);
+        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
         int width = display->getUTF8Width(daily_data.date.c_str());
         int x = (128 - width) / 2;
         display->drawUTF8(x, 2, daily_data.date.c_str());  // 下移2个单位，无横线
@@ -481,25 +548,25 @@ void HistoryViewV3::renderHistoryPage() {
         renderDayData(daily_data, 12);  // 内容下移2个单位
     }
 
-    // 页面指示器
-    display->setFont(u8g2_font_5x7_tf);
-    String page_info = "Day " + String(data_index + 1) + " (" + String(current_page + 1) + "/" + String(total_pages) + ")";
-    drawCenteredText(page_info, 52);
+    // 页面指示器 - 简化显示
+    display->setFont(FONT_CHINESE_TINY);  // 使用中文字体
+    String page_info = String(current_page + 1) + "/" + String(total_pages);
+    drawCenteredText(page_info, 58);  // 下移到底部
 }
 
 void HistoryViewV3::renderDayData(const DailyDataV3& data, int y) {
-    display->setFont(u8g2_font_6x10_tf);
+    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
 
     // 健身导向的每日数据展示
-    drawValue("Workouts:", String(data.daily_total.session_count), y);
-    drawValue("Exercise Time:", DataUtilsV3::formatTime(data.daily_total.total_duration), y + 10);
-    drawValue("Calories:", String((int)data.daily_total.total_calories), y + 20);
+    drawValue("次数:", String(data.daily_total.session_count), y);
+    drawValue("时长:", DataUtilsV3::formatTime(data.daily_total.total_duration), y + 10);
+    drawValue("卡路里:", String((int)data.daily_total.total_calories), y + 20);
 
     // 显示目标达成情况
     if (data.daily_total.targets_achieved > 0) {
-        drawValue("Goals Met:", String(data.daily_total.targets_achieved), y + 30);
+        drawValue("目标:", String(data.daily_total.targets_achieved), y + 30);
     } else {
-        drawValue("Jumps:", String(data.daily_total.total_jumps), y + 30);
+        drawValue("跳跃:", String(data.daily_total.total_jumps), y + 30);
     }
 }
 
@@ -656,12 +723,10 @@ void SettingsViewV3::render() {
 
     display->clearBuffer();
 
-    drawTitle("Settings", 6);  // 进一步上移到Y=6，为设置项预留更多空间
+    drawTitle("设置", 6);  // 进一步上移到Y=6，为设置项预留更多空间
     renderSettingItems();
 
-    if (editing_mode) {
-        renderEditIndicator();
-    }
+    // 移除编辑提示，简化界面
 
     display->sendBuffer();
 }
@@ -715,7 +780,7 @@ void SettingsViewV3::renderSettingItems() {
 
         String item_text = getSettingName(i) + ": " + getSettingValue(i);
 
-        display->setFont(u8g2_font_6x10_tf);  // 使用原来的字体大小保证可读性
+        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体保证可读性
 
         if (selected) {
             if (editing_mode) {
@@ -745,8 +810,19 @@ void SettingsViewV3::renderSettingItems() {
 }
 
 void SettingsViewV3::renderEditIndicator() {
-    display->setFont(u8g2_font_5x7_tf);  // 恢复合适的字体大小
-    drawCenteredText("Edit Mode - Press to Adjust", 58);
+    // 移除按键提示，按照用户要求去掉页面上的按键提示信息
+    // 原来的编辑模式提示代码已注释掉
+    /*
+    display->setFont(FONT_CHINESE_TINY);  // 使用中文字体
+    drawCenteredText("编辑模式 - 按键调整", 58);
+    */
+    
+    // 简化的编辑模式指示器，只显示闪烁效果不显示文字
+    uint32_t blink_cycle = millis() % 800;
+    if ((blink_cycle / 400) % 2 == 0) {
+        display->setFont(FONT_CHINESE_TINY);
+        drawCenteredText("编辑中", 58);
+    }
 }
 
 void SettingsViewV3::renderScrollIndicator() {
@@ -777,16 +853,16 @@ void SettingsViewV3::renderScrollIndicator() {
 
 String SettingsViewV3::getSettingName(int index) {
     switch (index) {
-        case SETTING_VOLUME: return "Volume";
-        case SETTING_DIFFICULTY: return "Difficulty";
-        case SETTING_SOUND_ENABLED: return "Sound";
-        case SETTING_TARGET_ENABLED: return "Target Enable";
-        case SETTING_TARGET_JUMPS: return "Target Jumps";
-        case SETTING_TARGET_TIME: return "Target Time";
-        case SETTING_TARGET_CALORIES: return "Target Calories";
-        case SETTING_RESET_DATA: return "Reset Data";
-        case SETTING_BACK: return "Back";
-        default: return "Unknown";
+        case SETTING_VOLUME: return "音量";
+        case SETTING_DIFFICULTY: return "难度";
+        case SETTING_SOUND_ENABLED: return "声音";
+        case SETTING_TARGET_ENABLED: return "目标";
+        case SETTING_TARGET_JUMPS: return "跳跃数";
+        case SETTING_TARGET_TIME: return "时间";
+        case SETTING_TARGET_CALORIES: return "卡路里";
+        case SETTING_RESET_DATA: return "重置";
+        case SETTING_BACK: return "返回";
+        default: return "未知";
     }
 }
 
@@ -797,17 +873,17 @@ String SettingsViewV3::getSettingValue(int index) {
         case SETTING_DIFFICULTY:
             return V3Config::getDifficultyName(config.default_difficulty);
         case SETTING_SOUND_ENABLED:
-            return config.sound_enabled ? "On" : "Off";
+            return config.sound_enabled ? "开" : "关";
         case SETTING_TARGET_ENABLED:
-            return target_settings.enabled ? "On" : "Off";
+            return target_settings.enabled ? "开" : "关";
         case SETTING_TARGET_JUMPS:
             return String(target_settings.target_jumps);
         case SETTING_TARGET_TIME:
-            return String(target_settings.target_time) + " sec";
+            return String(target_settings.target_time) + " 秒";
         case SETTING_TARGET_CALORIES:
             return String((int)target_settings.target_calories);
         case SETTING_RESET_DATA:
-            return "Execute";
+            return "执行";
         case SETTING_BACK:
             return "";
         default:
@@ -984,7 +1060,7 @@ void TargetTimerViewV3::render() {
         return;
     }
 
-    drawTitle("Target Timer", 12);
+    drawTitle("目标计时", 12);
 
     renderTargetInfo();
     renderTimer();
@@ -1048,8 +1124,8 @@ void TargetTimerViewV3::checkTargetAchievement() {
 }
 
 void TargetTimerViewV3::renderTargetInfo() {
-    display->setFont(u8g2_font_6x10_tf);
-    String target_text = "Target: " + String(target_duration) + " sec";
+    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+    String target_text = "目标: " + String(target_duration) + " 秒";
     drawCenteredText(target_text, 25);
 }
 
@@ -1058,11 +1134,15 @@ void TargetTimerViewV3::renderTimer() {
         uint32_t elapsed = (millis() - timer_start_time) / 1000;
         String time_text = DataUtilsV3::formatTime(elapsed);
 
-        display->setFont(u8g2_font_10x20_tf);
+        display->setFont(FONT_CHINESE_LARGE);  // 使用中文大字体
         drawCenteredText(time_text, 45);
     } else {
-        display->setFont(u8g2_font_6x10_tf);
-        drawCenteredText(target_achieved ? "目标达成!" : "按键开始", 45);
+        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+        // 移除按键提示，只保留目标达成信息
+        if (target_achieved) {
+            drawCenteredText("目标达成!", 45);
+        }
+        // 移除"按键开始"提示，按照用户要求去掉页面上的按键提示信息
     }
 }
 

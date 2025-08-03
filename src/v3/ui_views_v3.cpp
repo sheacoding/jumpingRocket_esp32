@@ -89,7 +89,6 @@ MainMenuViewV3::MainMenuViewV3(U8G2* disp) :
 void MainMenuViewV3::initMenuItems() {
     menu_items.clear();
     menu_items.push_back(MenuItemV3("开始运动", "", UI_VIEW_DIFFICULTY_SELECT));
-    menu_items.push_back(MenuItemV3("历史记录", "", UI_VIEW_HISTORY));
     menu_items.push_back(MenuItemV3("目标计时", "", UI_VIEW_TARGET_TIMER));
     menu_items.push_back(MenuItemV3("系统设置", "", UI_VIEW_SETTINGS));
 }
@@ -420,257 +419,7 @@ void DifficultySelectViewV3::confirmSelection() {
     }
 }
 
-// HistoryViewV3 实现
-HistoryViewV3::HistoryViewV3(U8G2* disp) :
-    UIViewV3(disp), current_page(0), total_pages(1), last_data_update(0) {
-}
-
-void HistoryViewV3::enter() {
-    active = true;
-    current_page = 0;
-    loadHistoryData();
-    Serial.println("📊 进入历史数据查看");
-}
-
-void HistoryViewV3::exit() {
-    active = false;
-    Serial.println("📊 退出历史数据查看");
-}
-
-void HistoryViewV3::update() {
-    if (!active) return;
-
-    uint32_t current_time = millis();
-    if (current_time - last_update_time >= 100) {
-        last_update_time = current_time;
-    }
-
-    // 定期更新数据
-    if (current_time - last_data_update >= 5000) { // 5秒更新一次
-        loadHistoryData();
-        last_data_update = current_time;
-    }
-}
-
-void HistoryViewV3::render() {
-    if (!active) return;
-
-    display->clearBuffer();
-
-    if (current_page == 0) {
-        renderSummaryPage();
-    } else if (current_page == 1) {
-        renderWeeklyPage();
-    } else if (current_page <= history_data.size() + 1) {
-        renderHistoryPage();
-    }
-    // 暂时注释掉趋势图页面
-    // else {
-    //     renderTrendPage();
-    // }
-
-    display->sendBuffer();
-}
-
-void HistoryViewV3::loadHistoryData() {
-    if (dataManagerV3.isInitialized()) {
-        history_data = dataManagerV3.getHistoryData(7); // 最近7天
-        total_pages = history_data.size() + 2; // 数据页 + 汇总页 + 周统计页 (暂时去掉趋势页)
-    }
-}
-
-void HistoryViewV3::renderSummaryPage() {
-    // 绘制无横线标题 - 移至屏幕顶部边缘
-    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
-    int width = display->getUTF8Width("健身总结");
-    int x = (128 - width) / 2;
-    display->drawUTF8(x, 0, "健身总结");  // 移至屏幕顶部Y=0
-
-    if (dataManagerV3.isInitialized()) {
-        const HistoryStatsV3& stats = dataManagerV3.getHistoryStats();
-
-        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
-
-        // 健身导向的数据展示 - 整体上移至顶部边缘
-        drawValue("运动天数:", String(stats.streak_days), 12);
-        drawValue("总时长:", DataUtilsV3::formatTime(stats.total_time), 24);
-        drawValue("卡路里:", String((int)stats.total_calories), 36);
-        drawValue("跳跃数:", String(stats.total_jumps), 48);
-    } else {
-        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
-        drawCenteredText("开始运动来", 20);
-        drawCenteredText("查看进度!", 35);
-    }
-
-    // 移除页面指示器，释放屏幕空间
-}
-
-void HistoryViewV3::renderWeeklyPage() {
-    // 绘制无横线标题 - 移至屏幕顶部边缘
-    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
-    int width = display->getUTF8Width("本周数据");
-    int x = (128 - width) / 2;
-    display->drawUTF8(x, 0, "本周数据");  // 移至屏幕顶部Y=0
-
-    if (dataManagerV3.isInitialized()) {
-        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
-
-        // 本周健身数据 - 整体上移至顶部边缘
-        drawValue("次数:", String(dataManagerV3.getWeeklyWorkouts()), 12);
-        drawValue("时长:", DataUtilsV3::formatTime(dataManagerV3.getWeeklyTime()), 24);
-        drawValue("卡路里:", String((int)dataManagerV3.getWeeklyCalories()), 36);
-        drawValue("目标:", String(dataManagerV3.getWeeklyGoalsAchieved()), 48);
-    } else {
-        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
-        drawCenteredText("暂无周数据", 25);
-    }
-
-    // 移除页面指示器，释放屏幕空间
-}
-
-void HistoryViewV3::renderHistoryPage() {
-    int data_index = current_page - 2; // 调整索引，因为前面有汇总页和周统计页
-    if (data_index >= 0 && data_index < history_data.size()) {
-        const DailyDataV3& daily_data = history_data[data_index];
-
-        // 绘制无横线标题 - 移至屏幕顶部边缘
-        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
-        int width = display->getUTF8Width(daily_data.date.c_str());
-        int x = (128 - width) / 2;
-        display->drawUTF8(x, 0, daily_data.date.c_str());  // 移至屏幕顶部Y=0
-
-        renderDayData(daily_data, 12);  // 整体上移至顶部边缘
-    }
-
-    // 移除页面指示器，释放屏幕空间
-}
-
-void HistoryViewV3::renderDayData(const DailyDataV3& data, int y) {
-    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
-
-    // 健身导向的每日数据展示 - 调整间距适配中文字体
-    drawValue("次数:", String(data.daily_total.session_count), y);
-    drawValue("时长:", DataUtilsV3::formatTime(data.daily_total.total_duration), y + 12);
-    drawValue("卡路里:", String((int)data.daily_total.total_calories), y + 24);
-
-    // 显示目标达成情况
-    if (data.daily_total.targets_achieved > 0) {
-        drawValue("目标:", String(data.daily_total.targets_achieved), y + 36);
-    } else {
-        drawValue("跳跃:", String(data.daily_total.total_jumps), y + 36);
-    }
-}
-
-// 暂时注释掉趋势图页面，避免显示问题
-/*
-void HistoryViewV3::renderTrendPage() {
-    // 绘制无横线标题
-    display->setFont(u8g2_font_6x10_tf);
-    int width = display->getUTF8Width("Exercise Trend");
-    int x = (128 - width) / 2;
-    display->drawUTF8(x, 2, "Exercise Trend");
-
-    // 检查是否有有效的历史数据
-    if (history_data.size() == 0 || !dataManagerV3.isInitialized()) {
-        display->setFont(u8g2_font_6x10_tf);
-        drawCenteredText("No trend data", 25);
-
-        // 页面指示器
-        display->setFont(u8g2_font_5x7_tf);
-        String page_info = "Trend (" + String(current_page + 1) + "/" + String(total_pages) + ")";
-        drawCenteredText(page_info, 52);
-        return;
-    }
-
-    // 绘制副标题
-    display->setFont(u8g2_font_5x7_tf);
-    drawCenteredText("7-Day Jump Trend", 12);
-
-    // 计算最大跳跃数，用于缩放
-    int max_jumps = 1; // 避免除零
-    for (const auto& data : history_data) {
-        if (data.daily_total.total_jumps > max_jumps) {
-            max_jumps = data.daily_total.total_jumps;
-        }
-    }
-
-    // 绘制简化的趋势图 - 使用点状图表
-    if (history_data.size() > 0 && history_data.size() <= 7) {
-        // 使用更简单的点状图表，避免条形图问题
-        int point_spacing = 15; // 点之间的间距
-        int total_width = (history_data.size() - 1) * point_spacing;
-        int start_x = (128 - total_width) / 2; // 居中显示
-
-        // 绘制基准线
-        int baseline_y = 38;
-        display->drawHLine(start_x - 10, baseline_y, total_width + 20);
-
-        for (int i = 0; i < history_data.size(); i++) {
-            int jumps = history_data[i].daily_total.total_jumps;
-
-            // 计算点的位置
-            int point_x = start_x + i * point_spacing;
-            int point_y = baseline_y;
-
-            // 根据跳跃数绘制不同高度的点或线
-            if (jumps > 0 && max_jumps > 0) {
-                int height = (jumps * 10) / max_jumps; // 最大高度10像素
-                if (height < 1) height = 1;
-                if (height > 10) height = 10;
-
-                // 绘制垂直线表示数据
-                for (int h = 0; h < height; h++) {
-                    display->drawPixel(point_x, baseline_y - h);
-                }
-
-                // 在顶部绘制一个点
-                display->drawPixel(point_x - 1, baseline_y - height);
-                display->drawPixel(point_x + 1, baseline_y - height);
-            } else {
-                // 无数据时只绘制基准点
-                display->drawPixel(point_x, baseline_y);
-            }
-
-            // 在基准线下方绘制日期标识点
-            display->drawPixel(point_x, baseline_y + 2);
-        }
-    }
-
-    // 页面指示器
-    display->setFont(u8g2_font_5x7_tf);
-    String page_info = "Trend (" + String(current_page + 1) + "/" + String(total_pages) + ")";
-    drawCenteredText(page_info, 52);
-}
-*/
-
-bool HistoryViewV3::handleButton(button_event_t event) {
-    if (!active) return false;
-
-    switch (event) {
-        case BUTTON_EVENT_SHORT_PRESS:
-            // 短按：下一页
-            updatePage(1);
-            return true;
-
-        case BUTTON_EVENT_LONG_PRESS:
-            // 长按：返回主菜单
-            return false;
-
-        default:
-            return false;
-    }
-}
-
-void HistoryViewV3::updatePage(int direction) {
-    current_page += direction;
-    if (current_page < 0) {
-        current_page = total_pages - 1;
-    } else if (current_page >= total_pages) {
-        current_page = 0;
-    }
-
-    Serial.printf("历史数据页面: %d/%d\n", current_page + 1, total_pages);
-}
+// HistoryViewV3 类已移除 - 简化版本不包含历史统计功能
 
 // SettingsViewV3 实现
 SettingsViewV3::SettingsViewV3(U8G2* disp) :
@@ -987,31 +736,7 @@ void SettingsViewV3::adjustValue(int direction) {
             Serial.printf("Sound: %s\n", config.sound_enabled ? "On" : "Off");
             break;
 
-        case SETTING_TARGET_ENABLED:
-            target_settings.enabled = !target_settings.enabled;
-            Serial.printf("Target enabled: %s\n", target_settings.enabled ? "On" : "Off");
-            break;
-
-        case SETTING_TARGET_JUMPS:
-            target_settings.target_jumps += direction * 10;
-            if (target_settings.target_jumps > 1000) target_settings.target_jumps = 1000;
-            if (target_settings.target_jumps < 10) target_settings.target_jumps = 10;
-            Serial.printf("Target jumps: %d\n", target_settings.target_jumps);
-            break;
-
-        case SETTING_TARGET_TIME:
-            target_settings.target_time += direction * 60; // 每次调整1分钟
-            if (target_settings.target_time > 3600) target_settings.target_time = 3600; // 最大60分钟
-            if (target_settings.target_time < 60) target_settings.target_time = 60; // 最小1分钟
-            Serial.printf("Target time: %d sec\n", target_settings.target_time);
-            break;
-
-        case SETTING_TARGET_CALORIES:
-            target_settings.target_calories += direction * 5.0f;
-            if (target_settings.target_calories > 500.0f) target_settings.target_calories = 500.0f;
-            if (target_settings.target_calories < 5.0f) target_settings.target_calories = 5.0f;
-            Serial.printf("Target calories: %.0f\n", target_settings.target_calories);
-            break;
+        // 删除了目标相关设置项 - 简化版本不包含历史统计功能
     }
 }
 
@@ -1154,7 +879,6 @@ UIManagerV3::UIManagerV3(U8G2* disp) :
     previous_view(UI_VIEW_MAIN_MENU),
     main_menu(nullptr),
     difficulty_select(nullptr),
-    history_view(nullptr),
     settings_view(nullptr),
     target_timer(nullptr),
     current_view_instance(nullptr) {
@@ -1175,11 +899,10 @@ bool UIManagerV3::init() {
     // 创建视图实例
     main_menu = new MainMenuViewV3(display);
     difficulty_select = new DifficultySelectViewV3(display);
-    history_view = new HistoryViewV3(display);
     settings_view = new SettingsViewV3(display);
     target_timer = new TargetTimerViewV3(display);
 
-    if (!main_menu || !difficulty_select || !history_view || !settings_view || !target_timer) {
+    if (!main_menu || !difficulty_select || !settings_view || !target_timer) {
         Serial.println("❌ UI视图创建失败");
         return false;
     }
@@ -1200,13 +923,11 @@ void UIManagerV3::deinit() {
 
     delete main_menu;
     delete difficulty_select;
-    delete history_view;
     delete settings_view;
     delete target_timer;
 
     main_menu = nullptr;
     difficulty_select = nullptr;
-    history_view = nullptr;
     settings_view = nullptr;
     target_timer = nullptr;
 
@@ -1257,7 +978,6 @@ bool UIManagerV3::handleButton(button_event_t event) {
             }
             break;
 
-        case UI_VIEW_HISTORY:
         case UI_VIEW_SETTINGS:
         case UI_VIEW_TARGET_TIMER:
             if (event == BUTTON_EVENT_LONG_PRESS) {
@@ -1301,7 +1021,6 @@ UIViewV3* UIManagerV3::getViewInstance(ui_view_t view) {
     switch (view) {
         case UI_VIEW_MAIN_MENU: return main_menu;
         case UI_VIEW_DIFFICULTY_SELECT: return difficulty_select;
-        case UI_VIEW_HISTORY: return history_view;
         case UI_VIEW_SETTINGS: return settings_view;
         case UI_VIEW_TARGET_TIMER: return target_timer;
         default: return nullptr;

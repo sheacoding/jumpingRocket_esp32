@@ -10,7 +10,6 @@
 typedef enum {
     UI_VIEW_MAIN_MENU = 0,      // 主菜单
     UI_VIEW_DIFFICULTY_SELECT,  // 难度选择
-    UI_VIEW_HISTORY,           // 历史数据
     UI_VIEW_SETTINGS,          // 系统设置
     UI_VIEW_TARGET_TIMER,      // 目标计时
     UI_VIEW_COUNT
@@ -113,32 +112,7 @@ private:
     void renderConfirmation();
 };
 
-// 历史数据视图
-class HistoryViewV3 : public UIViewV3 {
-private:
-    std::vector<DailyDataV3> history_data;
-    int current_page;
-    int total_pages;
-    uint32_t last_data_update;
-    
-public:
-    HistoryViewV3(U8G2* disp);
-    
-    void enter() override;
-    void exit() override;
-    void update() override;
-    void render() override;
-    bool handleButton(button_event_t event) override;
-    
-private:
-    void loadHistoryData();
-    void updatePage(int direction);
-    void renderHistoryPage();
-    void renderDayData(const DailyDataV3& data, int y);
-    void renderSummaryPage();
-    void renderWeeklyPage();
-    void renderTrendPage();
-};
+// 历史数据视图类已移除 - 简化版本不包含历史统计功能
 
 // 设置视图
 class SettingsViewV3 : public UIViewV3 {
@@ -157,11 +131,6 @@ private:
         SETTING_VOLUME = 0,
         SETTING_DIFFICULTY,
         SETTING_SOUND_ENABLED,
-        SETTING_TARGET_ENABLED,
-        SETTING_TARGET_JUMPS,
-        SETTING_TARGET_TIME,
-        SETTING_TARGET_CALORIES,
-        SETTING_RESET_DATA,
         SETTING_BACK,
         SETTING_COUNT
     };
@@ -232,7 +201,6 @@ private:
     // 视图实例
     MainMenuViewV3* main_menu;
     DifficultySelectViewV3* difficulty_select;
-    HistoryViewV3* history_view;
     SettingsViewV3* settings_view;
     TargetTimerViewV3* target_timer;
     

@@ -480,58 +480,52 @@ void HistoryViewV3::loadHistoryData() {
 }
 
 void HistoryViewV3::renderSummaryPage() {
-    // 绘制无横线标题
+    // 绘制无横线标题 - 移至屏幕顶部边缘
     display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
     int width = display->getUTF8Width("健身总结");
     int x = (128 - width) / 2;
-    display->drawUTF8(x, 2, "健身总结");  // 下移2个单位，无横线
+    display->drawUTF8(x, 0, "健身总结");  // 移至屏幕顶部Y=0
 
     if (dataManagerV3.isInitialized()) {
         const HistoryStatsV3& stats = dataManagerV3.getHistoryStats();
 
         display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
 
-        // 健身导向的数据展示 - 下移2个单位
+        // 健身导向的数据展示 - 整体上移至顶部边缘
         drawValue("运动天数:", String(stats.streak_days), 12);
-        drawValue("总时长:", DataUtilsV3::formatTime(stats.total_time), 22);
-        drawValue("卡路里:", String((int)stats.total_calories), 32);
-        drawValue("跳跃数:", String(stats.total_jumps), 42);
+        drawValue("总时长:", DataUtilsV3::formatTime(stats.total_time), 24);
+        drawValue("卡路里:", String((int)stats.total_calories), 36);
+        drawValue("跳跃数:", String(stats.total_jumps), 48);
     } else {
         display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
-        drawCenteredText("开始运动来", 17);
-        drawCenteredText("查看进度!", 29);
+        drawCenteredText("开始运动来", 20);
+        drawCenteredText("查看进度!", 35);
     }
 
-    // 页面指示器 - 简化显示
-    display->setFont(FONT_CHINESE_TINY);  // 使用中文字体
-    String page_info = String(current_page + 1) + "/" + String(total_pages);
-    drawCenteredText(page_info, 58);  // 下移到底部
+    // 移除页面指示器，释放屏幕空间
 }
 
 void HistoryViewV3::renderWeeklyPage() {
-    // 绘制无横线标题
+    // 绘制无横线标题 - 移至屏幕顶部边缘
     display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
     int width = display->getUTF8Width("本周数据");
     int x = (128 - width) / 2;
-    display->drawUTF8(x, 2, "本周数据");  // 下移2个单位，无横线
+    display->drawUTF8(x, 0, "本周数据");  // 移至屏幕顶部Y=0
 
     if (dataManagerV3.isInitialized()) {
         display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
 
-        // 本周健身数据 - 下移2个单位
+        // 本周健身数据 - 整体上移至顶部边缘
         drawValue("次数:", String(dataManagerV3.getWeeklyWorkouts()), 12);
-        drawValue("时长:", DataUtilsV3::formatTime(dataManagerV3.getWeeklyTime()), 22);
-        drawValue("卡路里:", String((int)dataManagerV3.getWeeklyCalories()), 32);
-        drawValue("目标:", String(dataManagerV3.getWeeklyGoalsAchieved()), 42);
+        drawValue("时长:", DataUtilsV3::formatTime(dataManagerV3.getWeeklyTime()), 24);
+        drawValue("卡路里:", String((int)dataManagerV3.getWeeklyCalories()), 36);
+        drawValue("目标:", String(dataManagerV3.getWeeklyGoalsAchieved()), 48);
     } else {
         display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
-        drawCenteredText("暂无周数据", 22);
+        drawCenteredText("暂无周数据", 25);
     }
 
-    // 页面指示器 - 简化显示
-    display->setFont(FONT_CHINESE_TINY);  // 使用中文字体
-    String page_info = String(current_page + 1) + "/" + String(total_pages);
-    drawCenteredText(page_info, 58);  // 下移到底部
+    // 移除页面指示器，释放屏幕空间
 }
 
 void HistoryViewV3::renderHistoryPage() {
@@ -539,34 +533,31 @@ void HistoryViewV3::renderHistoryPage() {
     if (data_index >= 0 && data_index < history_data.size()) {
         const DailyDataV3& daily_data = history_data[data_index];
 
-        // 绘制无横线标题
+        // 绘制无横线标题 - 移至屏幕顶部边缘
         display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
         int width = display->getUTF8Width(daily_data.date.c_str());
         int x = (128 - width) / 2;
-        display->drawUTF8(x, 2, daily_data.date.c_str());  // 下移2个单位，无横线
+        display->drawUTF8(x, 0, daily_data.date.c_str());  // 移至屏幕顶部Y=0
 
-        renderDayData(daily_data, 12);  // 内容下移2个单位
+        renderDayData(daily_data, 12);  // 整体上移至顶部边缘
     }
 
-    // 页面指示器 - 简化显示
-    display->setFont(FONT_CHINESE_TINY);  // 使用中文字体
-    String page_info = String(current_page + 1) + "/" + String(total_pages);
-    drawCenteredText(page_info, 58);  // 下移到底部
+    // 移除页面指示器，释放屏幕空间
 }
 
 void HistoryViewV3::renderDayData(const DailyDataV3& data, int y) {
     display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
 
-    // 健身导向的每日数据展示
+    // 健身导向的每日数据展示 - 调整间距适配中文字体
     drawValue("次数:", String(data.daily_total.session_count), y);
-    drawValue("时长:", DataUtilsV3::formatTime(data.daily_total.total_duration), y + 10);
-    drawValue("卡路里:", String((int)data.daily_total.total_calories), y + 20);
+    drawValue("时长:", DataUtilsV3::formatTime(data.daily_total.total_duration), y + 12);
+    drawValue("卡路里:", String((int)data.daily_total.total_calories), y + 24);
 
     // 显示目标达成情况
     if (data.daily_total.targets_achieved > 0) {
-        drawValue("目标:", String(data.daily_total.targets_achieved), y + 30);
+        drawValue("目标:", String(data.daily_total.targets_achieved), y + 36);
     } else {
-        drawValue("跳跃:", String(data.daily_total.total_jumps), y + 30);
+        drawValue("跳跃:", String(data.daily_total.total_jumps), y + 36);
     }
 }
 

@@ -125,11 +125,13 @@ private:
 
     // 轮播显示相关
     int display_start_index;  // 当前显示的第一个设置项索引
-    static const int MAX_VISIBLE_ITEMS = 5;  // 屏幕最多显示5个设置项
+    static const int MAX_VISIBLE_ITEMS = 4;  // 屏幕最多显示4个设置项
 
     enum SettingItem {
         SETTING_VOLUME = 0,
         SETTING_DIFFICULTY,
+        SETTING_TARGET_JUMPS,     // 自定义目标跳跃次数
+        SETTING_TARGET_TIME,      // 自定义目标时间
         SETTING_SOUND_ENABLED,
         SETTING_BACK,
         SETTING_COUNT

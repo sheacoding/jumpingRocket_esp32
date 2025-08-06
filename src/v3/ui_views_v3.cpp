@@ -134,27 +134,29 @@ void MainMenuViewV3::render() {
 }
 
 void MainMenuViewV3::renderMenuItems() {
-    // 调整布局：4个菜单项从屏幕上方开始，确保所有文字完整显示
-    // 从顶部留出适当边距，确保"系统设置"文字完整显示
-    int start_y = 2;  // 从顶部16px开始，留出足够上边距
-    int item_spacing = 15;  // 减少间距以适应屏幕高度，每项占12px
+    // 恢复原来的大字体/大间距布局
+    // 原注释：从顶部留出适当边距；item_spacing = 20
+    int start_y = 2;
+    int item_spacing = 25;
 
-    Serial.printf("🎨 Rendering menu items, start_y=%d, spacing=%d\n", start_y, item_spacing);
+    Serial.printf("[MAIN] render items (large): start_y=%d, spacing=%d, size=%d, selected=%d\n",
+                  start_y, item_spacing, (int)menu_items.size(), selected_index);
 
-    for (int i = 0; i < menu_items.size() && i < 4; i++) {
+    int count = min((int)menu_items.size(), 4);
+    for (int i = 0; i < count; i++) {
         int y = start_y + i * item_spacing;
         bool selected = (i == selected_index);
 
-        Serial.printf("📝 Rendering Chinese menu item %d: '%s' (y=%d, selected=%s)\n",
+        Serial.printf("[MAIN] item %d: '%s' (y=%d, selected=%s)\n",
                      i, menu_items[i].title.c_str(), y, selected ? "yes" : "no");
 
-        // 使用闪烁效果绘制选中项，并水平居中
         drawMenuItemWithBlinkCentered(menu_items[i].title, y, selected);
     }
 }
 
 void MainMenuViewV3::drawMenuItemWithBlinkCentered(const String& text, int y, bool selected) {
-    display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+    // 使用较大的中文字体以匹配“原来的大字体”观感
+    display->setFont(FONT_CHINESE_MEDIUM);  // 14像素中文
     
     // 计算文字宽度以实现水平居中
     int text_width = display->getUTF8Width(text.c_str());
@@ -164,19 +166,16 @@ void MainMenuViewV3::drawMenuItemWithBlinkCentered(const String& text, int y, bo
     if (x < 2) x = 2;
     if (x + text_width > 126) x = 126 - text_width;
 
-    if (selected) {
-        // 文字闪烁效果：每500ms切换一次显示状态
-        uint32_t current_time = millis();
-        bool blink_state = (current_time / 500) % 2 == 0;
+    // 文本始终绘制
+    display->drawUTF8(x, y, text.c_str());
 
-        if (blink_state) {
-            // 显示文字（居中）
-            display->drawUTF8(x, y, text.c_str());
-        }
-        // 不显示状态时什么都不画，实现闪烁效果
-    } else {
-        // 非选中项正常显示（居中）
-        display->drawUTF8(x, y, text.c_str());
+    // 选中项箭头提示（更靠近文字，保持大间距布局美观）
+    if (selected) {
+        int indicator_x = max(2, x - 8);
+        display->setFont(FONT_CHINESE_SMALL); // 箭头用较小字体绘制更细
+        display->drawStr(indicator_x, y, ">");
+        // 恢复大字体，避免影响后续文本测宽
+        display->setFont(FONT_CHINESE_MEDIUM);
     }
 }
 
@@ -199,16 +198,30 @@ void MainMenuViewV3::renderStatusBar() {
 
 bool MainMenuViewV3::handleButton(button_event_t event) {
     if (!active) return false;
+
+    // 详细日志，便于定位“无法切换/选中”
+    Serial.printf("[MAIN] 按键事件: %s, 当前索引=%d, 项数=%d\n",
+                  (event == BUTTON_EVENT_SHORT_PRESS) ? "短按" :
+                  (event == BUTTON_EVENT_LONG_PRESS) ? "长按" : "其他",
+                  selected_index, (int)menu_items.size());
     
     switch (event) {
         case BUTTON_EVENT_SHORT_PRESS:
             // 短按：选择下一项
             updateSelection(1);
+            Serial.printf("[MAIN] move selection -> %d (%s)\n",
+                          selected_index,
+                          (selected_index >= 0 && selected_index < (int)menu_items.size())
+                          ? menu_items[selected_index].title.c_str() : "invalid");
             return true;
             
         case BUTTON_EVENT_LONG_PRESS:
             // 长按：确认选择
-            Serial.printf("选择菜单项: %s\n", menu_items[selected_index].title.c_str());
+            if (selected_index >= 0 && selected_index < (int)menu_items.size()) {
+                Serial.printf("[MAIN] 长按确认: %d - %s\n", selected_index, menu_items[selected_index].title.c_str());
+            } else {
+                Serial.printf("[MAIN][WARN] 长按时索引无效: %d (size=%d)\n", selected_index, (int)menu_items.size());
+            }
             return false; // 返回false让UI管理器处理视图切换
             
         default:
@@ -224,14 +237,27 @@ ui_view_t MainMenuViewV3::getSelectedView() const {
 }
 
 void MainMenuViewV3::updateSelection(int direction) {
+    int old = selected_index;
+
+    // 保护：菜单为空时不进行任何修改，避免越界
+    if (menu_items.empty()) {
+        Serial.println("[MAIN][WARN] menu_items 为空，忽略选择变更");
+        return;
+    }
+
     selected_index += direction;
     if (selected_index < 0) {
-        selected_index = menu_items.size() - 1;
-    } else if (selected_index >= menu_items.size()) {
+        selected_index = (int)menu_items.size() - 1;
+    } else if (selected_index >= (int)menu_items.size()) {
         selected_index = 0;
     }
-    
-    Serial.printf("菜单选择: %d - %s\n", selected_index, menu_items[selected_index].title.c_str());
+
+    // 防御：再次夹取
+    if (selected_index < 0) selected_index = 0;
+    if (selected_index >= (int)menu_items.size()) selected_index = (int)menu_items.size() - 1;
+
+    Serial.printf("[MAIN] 菜单选择: %d -> %d - %s (size=%d)\n",
+                  old, selected_index, menu_items[selected_index].title.c_str(), (int)menu_items.size());
 }
 
 // DifficultySelectViewV3 实现
@@ -245,10 +271,11 @@ DifficultySelectViewV3::DifficultySelectViewV3(U8G2* disp) :
 
 void DifficultySelectViewV3::enter() {
     active = true;
+    // 进入页面时以系统默认难度为初始，避免上次确认残留造成困惑
     selected_difficulty = DIFFICULTY_NORMAL;
     selection_confirmed = false;
     animation_time = millis();
-    Serial.println("🎯 进入难度选择");
+    Serial.printf("🎯 进入难度选择: selected=%d\n", (int)selected_difficulty);
 }
 
 void DifficultySelectViewV3::exit() {
@@ -273,13 +300,13 @@ void DifficultySelectViewV3::render() {
     if (selection_confirmed) {
         renderConfirmation();
     } else {
-        // 绘制标题（上移12个单位）
-        drawTitle("选择难度", 12 - 12);  // 12 - 12 = 0
+        // 标题放在顶部
+        drawTitle("选择难度", 0);
 
         // 绘制难度选项
         renderDifficultyOptions();
 
-        // 绘制难度详情
+        // 绘制难度详情（基于系统设置的基础次数/时长按难度系数计算后的结果）
         renderDifficultyDetails();
     }
     
@@ -287,14 +314,23 @@ void DifficultySelectViewV3::render() {
 }
 
 void DifficultySelectViewV3::renderDifficultyOptions() {
-    int start_y = 25 - 12;  // 上移12个单位：25 - 12 = 13
+    // 恢复小字体与原有行距，避免挤占底部目标信息
+    int start_y = 13;
     int item_height = 11;
+
+    // 读取系统基础设置（来自系统设置页）
+    SystemConfigV3 base_cfg;
+    if (dataManagerV3.isInitialized()) {
+        base_cfg = dataManagerV3.getSystemConfig();
+    } else {
+        base_cfg.resetToDefault();
+    }
 
     for (int i = 0; i < DIFFICULTY_COUNT; i++) {
         int y = start_y + i * item_height;
         bool selected = (i == (int)selected_difficulty);
 
-        const difficulty_config_t* config = V3Config::getDifficultyConfig((game_difficulty_t)i);
+        const difficulty_config_t* diff_cfg = V3Config::getDifficultyConfig((game_difficulty_t)i);
         // 使用中文难度名称
         String difficulty_name;
         switch((game_difficulty_t)i) {
@@ -303,23 +339,24 @@ void DifficultySelectViewV3::renderDifficultyOptions() {
             case DIFFICULTY_HARD: difficulty_name = "困难"; break;
             default: difficulty_name = "普通"; break;
         }
-        String text = difficulty_name + " (" + String((int)(config->multiplier * 100)) + "%)";
 
-        // 使用居中显示的菜单项
-        display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体
+        // 显示“难度名称 + 百分比（来自配置乘数）”
+        String text = difficulty_name + " (" + String((int)(diff_cfg->multiplier * 100)) + "%)";
+
+        // 使用小字体，保证底部目标信息完整显示
+        display->setFont(FONT_CHINESE_SMALL);
         int text_width = display->getUTF8Width(text.c_str());
-        int x = (128 - text_width) / 2;  // 计算居中位置
-        
+        int x = (128 - text_width) / 2;  // 居中
+
+        // 文本常亮
+        display->drawUTF8(x, y, text.c_str());
+
+        // 选中项：在文本左侧绘制小箭头提示（使用更小字体以避免遮挡）
         if (selected) {
-            // 选中项闪烁效果
-            uint32_t current_time = millis();
-            bool blink_state = (current_time / 500) % 2 == 0;
-            if (blink_state) {
-                display->drawUTF8(x, y, text.c_str());
-            }
-        } else {
-            // 非选中项正常显示
-            display->drawUTF8(x, y, text.c_str());
+            int indicator_x = max(2, x - 8);
+            display->setFont(FONT_CHINESE_TINY);
+            display->drawStr(indicator_x, y, ">");
+            display->setFont(FONT_CHINESE_SMALL);
         }
     }
 }
@@ -327,9 +364,11 @@ void DifficultySelectViewV3::renderDifficultyOptions() {
 void DifficultySelectViewV3::renderDifficultyDetails() {
     const difficulty_config_t* config = V3Config::getDifficultyConfig(selected_difficulty);
 
-    display->setFont(FONT_CHINESE_TINY);  // 使用中文字体
+    // 保持细字，确保完整显示
+    display->setFont(FONT_CHINESE_TINY);
 
-    int detail_y = 52;  // 调整位置确保文字完整显示：64 - 8 = 56px（预留足够空间）
+    // 小字体与11px行距下，将详情放在 52 像素，避免与列表第三项重叠
+    int detail_y = 52;
     String target_text = "目标: " + String(config->target_jumps) + " 次/" + String(config->target_time) + " 秒";
     drawCenteredText(target_text, detail_y);
 }
@@ -370,17 +409,21 @@ bool DifficultySelectViewV3::handleButton(button_event_t event) {
     
     if (selection_confirmed) {
         // 已确认选择，任意按键开始游戏
+        Serial.println("[DIFF] 已确认，交由UI管理器处理切换");
         return false; // 让UI管理器处理
     }
     
     switch (event) {
         case BUTTON_EVENT_SHORT_PRESS:
             // 短按：切换难度
+            Serial.printf("[DIFF] 短按，当前=%d -> ", (int)selected_difficulty);
             updateSelection(1);
+            Serial.printf("新=%d\n", (int)selected_difficulty);
             return true;
             
         case BUTTON_EVENT_LONG_PRESS:
             // 长按：确认选择
+            Serial.printf("[DIFF] 长按确认: %d\n", (int)selected_difficulty);
             confirmSelection();
             return true;
             
@@ -390,17 +433,27 @@ bool DifficultySelectViewV3::handleButton(button_event_t event) {
 }
 
 void DifficultySelectViewV3::updateSelection(int direction) {
-    int new_difficulty = (int)selected_difficulty + direction;
+    int old = (int)selected_difficulty;
+    int new_difficulty = old + direction;
     if (new_difficulty < 0) {
         new_difficulty = DIFFICULTY_COUNT - 1;
     } else if (new_difficulty >= DIFFICULTY_COUNT) {
         new_difficulty = 0;
     }
-    
+
     selected_difficulty = (game_difficulty_t)new_difficulty;
-    
-    const difficulty_config_t* config = V3Config::getDifficultyConfig(selected_difficulty);
-    Serial.printf("Selected difficulty: %s\n", config->name_en);
+
+    const difficulty_config_t* cfg = V3Config::getDifficultyConfig(selected_difficulty);
+    Serial.printf("[DIFF] 选择变更: %d -> %d (%s)\n", old, (int)selected_difficulty, cfg ? cfg->name_en : "null");
+
+    // 立即重绘，确保底部目标值立刻按新难度+最新基础配置更新显示
+    if (display) {
+        display->clearBuffer();
+        drawTitle("选择难度", 0);
+        renderDifficultyOptions();
+        renderDifficultyDetails();
+        display->sendBuffer();
+    }
 }
 
 void DifficultySelectViewV3::confirmSelection() {
@@ -409,9 +462,10 @@ void DifficultySelectViewV3::confirmSelection() {
     animation_time = millis();
     
     const difficulty_config_t* config = V3Config::getDifficultyConfig(confirmed_difficulty);
-    Serial.printf("Confirmed difficulty: %s\n", config->name_en);
+    Serial.printf("[DIFF] 确认难度: %s\n", config ? config->name_en : "null");
     
-    // 设置V3.0难度
+    // 将确认的难度写入系统配置的默认难度，但不直接改动基础次数/时长。
+    // 运行时按难度乘数对基础配置进行计算使用（如 renderDifficultyDetails 所示）。
     if (dataManagerV3.isInitialized()) {
         SystemConfigV3 config_v3 = dataManagerV3.getSystemConfig();
         config_v3.default_difficulty = confirmed_difficulty;
@@ -428,12 +482,28 @@ SettingsViewV3::SettingsViewV3(U8G2* disp) :
 
 void SettingsViewV3::enter() {
     active = true;
-    selected_item = 0;
+    selected_item = 0;  // 从第一项开始
     editing_mode = false;
-    display_start_index = 0;  // 初始化轮播显示起始索引
+    display_start_index = 0;  // 从第一页开始显示
+    
     loadConfig();
     loadTargetSettings();
+    
+    // 重要：确保显示窗口正确初始化
+    updateDisplayWindow();
+    
     Serial.println("⚙️ 进入系统设置");
+
+    // 详细诊断信息
+    Serial.printf("[SETTINGS] 初始化完成: selected_item=%d, display_start_index=%d\n", selected_item, display_start_index);
+    Serial.printf("[SETTINGS] 系统常量: MAX_VISIBLE_ITEMS=%d, SETTING_COUNT=%d\n", MAX_VISIBLE_ITEMS, (int)SETTING_COUNT);
+    Serial.printf("[SETTINGS] 设置项枚举: VOL=%d DIFF=%d TJ=%d TT=%d SOUND=%d BACK=%d\n",
+                  (int)SETTING_VOLUME, (int)SETTING_DIFFICULTY, (int)SETTING_TARGET_JUMPS,
+                  (int)SETTING_TARGET_TIME, (int)SETTING_SOUND_ENABLED, (int)SETTING_BACK);
+                  
+    // 验证初始状态
+    bool initial_visible = (selected_item >= display_start_index && selected_item < display_start_index + MAX_VISIBLE_ITEMS);
+    Serial.printf("[SETTINGS] 初始选中项%d可见性: %s\n", selected_item, initial_visible ? "✅ 可见" : "❌ 不可见");
 }
 
 void SettingsViewV3::exit() {
@@ -463,7 +533,7 @@ void SettingsViewV3::render() {
 
     display->clearBuffer();
 
-    drawTitle("设置", 6);  // 进一步上移到Y=6，为设置项预留更多空间
+    drawTitle("系统设置", 0);  // 标题移至屏幕顶部边缘Y=0
     renderSettingItems();
 
     // 移除编辑提示，简化界面
@@ -502,16 +572,25 @@ void SettingsViewV3::saveTargetSettings() {
 }
 
 void SettingsViewV3::renderSettingItems() {
-    // 轮播显示逻辑：
-    // 标题: Y=6, 占用到Y=13
-    // 可用空间: Y=16 到 Y=56 = 40px
-    // 每项高度: 8px (u8g2_font_6x10_tf字体 + 间距)
-    // 最多显示: 5项 (40px / 8px = 5)
+    // 优化后的设置布局逻辑：
+    // 标题: Y=0, 占用到Y=12
+    // 可用空间: Y=16 到 Y=64 = 48px
+    // 每项高度: 16px (中文字体 + 加大间距)
+    // 最多显示: 4项 (3 * 16px = 48px, 对应简化后的设置数量)
     int start_y = 16;
-    int item_height = 8;
+    int item_height = 16;
 
     // 只渲染当前窗口内的设置项
     int end_index = min(display_start_index + MAX_VISIBLE_ITEMS, (int)SETTING_COUNT);
+    
+    // 调试信息：显示渲染范围
+    Serial.printf("渲染设置项: start_index=%d, end_index=%d, selected_item=%d\n", 
+                  display_start_index, end_index, selected_item);
+
+    // 检查选中项目是否在可见范围内
+    bool selected_visible = (selected_item >= display_start_index && selected_item < end_index);
+    Serial.printf("🔍 选中项目%d是否可见: %s (范围%d-%d)\n", 
+                  selected_item, selected_visible ? "是" : "否", display_start_index, end_index-1);
 
     for (int i = display_start_index; i < end_index; i++) {
         int display_index = i - display_start_index;  // 在屏幕上的相对位置
@@ -519,29 +598,27 @@ void SettingsViewV3::renderSettingItems() {
         bool selected = (i == selected_item);
 
         String item_text = getSettingName(i) + ": " + getSettingValue(i);
+        
+        // 增强调试信息：显示每个项目的详细状态
+        Serial.printf("  渲染项目%d: %s, 选中=%s, Y=%d, display_index=%d\n", 
+                      i, getSettingName(i).c_str(), selected ? "是" : "否", y, display_index);
 
         display->setFont(FONT_CHINESE_SMALL);  // 使用中文字体保证可读性
 
         if (selected) {
+            // 选中项：仅使用箭头常亮 + 文本常亮，取消边框闪烁，避免位置偏差问题
+            display->drawStr(4, y, ">");
+            display->drawUTF8(32, y, item_text.c_str());
+
+            // 编辑模式指示器
             if (editing_mode) {
-                // 编辑模式：文字闪烁显示
-                uint32_t elapsed = millis() - edit_start_time;
-                if ((elapsed / 300) % 2 == 0) {
-                    display->drawUTF8(4, y, item_text.c_str());
-                }
-                // 不显示状态时什么都不画，实现闪烁效果
-            } else {
-                // 选中但未编辑：文字闪烁显示
-                uint32_t current_time = millis();
-                bool blink_state = (current_time / 500) % 2 == 0;
-                if (blink_state) {
-                    display->drawUTF8(4, y, item_text.c_str());
-                }
-                // 不显示状态时什么都不画，实现闪烁效果
+                display->drawStr(124, y, "*");
             }
+
+            Serial.printf("    ✅ 选中项%d已渲染(箭头常亮, 无边框闪烁): %s\n", i, item_text.c_str());
         } else {
             // 非选中项正常显示
-            display->drawUTF8(4, y, item_text.c_str());
+            display->drawUTF8(32, y, item_text.c_str());
         }
     }
 
@@ -566,18 +643,24 @@ void SettingsViewV3::renderEditIndicator() {
 }
 
 void SettingsViewV3::renderScrollIndicator() {
-    // 只有当设置项总数超过可显示数量时才显示滚动指示器
+    // 当前有6个设置项，MAX_VISIBLE_ITEMS=4，需要显示滚动指示器
     if ((int)SETTING_COUNT <= MAX_VISIBLE_ITEMS) {
-        return;
+        return;  // 不需要滚动指示器
     }
 
     // 在屏幕右侧绘制滚动条
-    int scroll_x = 124;  // 滚动条X位置
+    int scroll_x = 123;  // 滚动条X位置（左移1，避免与高亮框冲突）
     int scroll_y_start = 16;  // 滚动条起始Y位置
     int scroll_height = 40;   // 滚动条总高度
 
+    // 防止除零错误：先检查分母是否为零
+    int scrollable_items = (int)SETTING_COUNT - MAX_VISIBLE_ITEMS;
+    if (scrollable_items <= 0) {
+        return;  // 无需滚动，直接返回
+    }
+
     // 计算滚动条位置和大小
-    float scroll_ratio = (float)display_start_index / ((int)SETTING_COUNT - MAX_VISIBLE_ITEMS);
+    float scroll_ratio = (float)display_start_index / scrollable_items;
     int indicator_height = max(2, scroll_height * MAX_VISIBLE_ITEMS / (int)SETTING_COUNT);
     int indicator_y = scroll_y_start + (scroll_height - indicator_height) * scroll_ratio;
 
@@ -595,14 +678,13 @@ String SettingsViewV3::getSettingName(int index) {
     switch (index) {
         case SETTING_VOLUME: return "音量";
         case SETTING_DIFFICULTY: return "难度";
+        case SETTING_TARGET_JUMPS: return "次数";
+        case SETTING_TARGET_TIME: return "时长";
         case SETTING_SOUND_ENABLED: return "声音";
-        case SETTING_TARGET_ENABLED: return "目标";
-        case SETTING_TARGET_JUMPS: return "跳跃数";
-        case SETTING_TARGET_TIME: return "时间";
-        case SETTING_TARGET_CALORIES: return "卡路里";
-        case SETTING_RESET_DATA: return "重置";
         case SETTING_BACK: return "返回";
-        default: return "未知";
+        default:
+            Serial.printf("[SETTINGS][WARN] unknown setting index in getSettingName: %d\n", index);
+            return "未知";
     }
 }
 
@@ -611,22 +693,23 @@ String SettingsViewV3::getSettingValue(int index) {
         case SETTING_VOLUME:
             return String(config.volume) + "%";
         case SETTING_DIFFICULTY:
-            return V3Config::getDifficultyName(config.default_difficulty);
-        case SETTING_SOUND_ENABLED:
-            return config.sound_enabled ? "开" : "关";
-        case SETTING_TARGET_ENABLED:
-            return target_settings.enabled ? "开" : "关";
+            // 返回中文难度名称
+            switch(config.default_difficulty) {
+                case DIFFICULTY_EASY: return "简单";
+                case DIFFICULTY_NORMAL: return "普通";
+                case DIFFICULTY_HARD: return "困难";
+                default: return "普通";
+            }
         case SETTING_TARGET_JUMPS:
-            return String(target_settings.target_jumps);
+            return String(config.base_target_jumps) + " 次";
         case SETTING_TARGET_TIME:
-            return String(target_settings.target_time) + " 秒";
-        case SETTING_TARGET_CALORIES:
-            return String((int)target_settings.target_calories);
-        case SETTING_RESET_DATA:
-            return "执行";
+            return String(config.base_target_time) + " 秒";
+        case SETTING_SOUND_ENABLED:
+            return config.sound_enabled ? "打开" : "关闭";
         case SETTING_BACK:
             return "";
         default:
+            Serial.printf("[SETTINGS][WARN] unknown setting index in getSettingValue: %d\n", index);
             return "";
     }
 }
@@ -634,27 +717,37 @@ String SettingsViewV3::getSettingValue(int index) {
 bool SettingsViewV3::handleButton(button_event_t event) {
     if (!active) return false;
 
+    Serial.printf("🔘 按键事件: %s, 当前项目: %d (%s), 编辑模式: %s\n",
+                  (event == BUTTON_EVENT_SHORT_PRESS) ? "短按" : "长按",
+                  selected_item, getSettingName(selected_item).c_str(),
+                  editing_mode ? "是" : "否");
+
     switch (event) {
         case BUTTON_EVENT_SHORT_PRESS:
             if (editing_mode) {
                 // 编辑模式：调整数值
+                Serial.println("📝 编辑模式：调整数值");
                 adjustValue(1);
             } else {
                 // 普通模式：移动选择
+                Serial.println("🔄 普通模式：切换选项");
+                int before = selected_item;
                 updateSelection(1);
+                Serial.printf("[SETTINGS] move selection: %d -> %d, display_start_index=%d\n",
+                              before, selected_item, display_start_index);
             }
             return true;
 
         case BUTTON_EVENT_LONG_PRESS:
+            Serial.printf("[SETTINGS] long press @ index=%d (%s), display_start_index=%d\n",
+                          selected_item, getSettingName(selected_item).c_str(), display_start_index);
             if (selected_item == SETTING_BACK) {
                 // 返回主菜单
+                Serial.println("🔙 返回主菜单");
                 return false;
-            } else if (selected_item == SETTING_RESET_DATA) {
-                // 重置数据
-                Serial.println("⚠️ 重置数据功能暂未实现");
-                return true;
             } else {
                 // 切换编辑模式
+                Serial.println("✏️ 切换编辑模式");
                 toggleEditMode();
             }
             return true;
@@ -665,39 +758,68 @@ bool SettingsViewV3::handleButton(button_event_t event) {
 }
 
 void SettingsViewV3::updateSelection(int direction) {
+    int old_selected = selected_item;
+    
+    // 循环选择逻辑
     selected_item += direction;
     if (selected_item < 0) {
-        selected_item = SETTING_COUNT - 1;
+        selected_item = SETTING_COUNT - 1;  // 回到最后一项
     } else if (selected_item >= SETTING_COUNT) {
-        selected_item = 0;
+        selected_item = 0;  // 回到第一项
     }
 
-    // 更新轮播显示窗口
+    int old_window = display_start_index;
+    
+    // 关键修复：立即更新滚动窗口，确保选中项可见
     updateDisplayWindow();
 
-    Serial.printf("设置选择: %s\n", getSettingName(selected_item).c_str());
+    // 增强的调试信息
+    Serial.printf("[SETTINGS] 选择变更: %d -> %d (%s), 窗口: %d -> %d\n",
+                  old_selected, selected_item, getSettingName(selected_item).c_str(), old_window, display_start_index);
+    Serial.printf("[SETTINGS] 可见范围校验: visible=[%d,%d), selected_in=%s\n",
+                  display_start_index, display_start_index + MAX_VISIBLE_ITEMS,
+                  (selected_item >= display_start_index && selected_item < display_start_index + MAX_VISIBLE_ITEMS) ? "YES" : "NO");
+                  
+    // 验证选择是否成功
+    if (selected_item < 0 || selected_item >= SETTING_COUNT) {
+        Serial.printf("[SETTINGS] ❌ ERROR: selected_item=%d 越界! SETTING_COUNT=%d\n", selected_item, (int)SETTING_COUNT);
+        selected_item = max(0, min((int)SETTING_COUNT - 1, selected_item));  // 强制修复
+    }
 }
 
 void SettingsViewV3::updateDisplayWindow() {
-    // 确保选中项在可见范围内
-    if (selected_item < display_start_index) {
-        // 选中项在当前窗口上方，向上滚动
-        display_start_index = selected_item;
-    } else if (selected_item >= display_start_index + MAX_VISIBLE_ITEMS) {
-        // 选中项在当前窗口下方，向下滚动
-        display_start_index = selected_item - MAX_VISIBLE_ITEMS + 1;
+    // 调试信息：显示实际的设置项数量
+    Serial.printf("[SETTINGS] window pre: COUNT=%d, MAX=%d, selected=%d, window=%d\n",
+                  (int)SETTING_COUNT, MAX_VISIBLE_ITEMS, selected_item, display_start_index);
+
+    // 保护：强力夹取 selected_item，避免由于异常输入导致的不可见与抖动
+    if (selected_item < 0) selected_item = 0;
+    if (selected_item >= (int)SETTING_COUNT) selected_item = (int)SETTING_COUNT - 1;
+    
+    // 让选中项尽量停在窗口中部，滚动更平滑：目标将选中项放在窗口第2行（索引1），除边界外
+    int desired_offset = 1; // 0..MAX_VISIBLE_ITEMS-1
+    int new_window = selected_item - desired_offset;
+    
+    // 边界处理
+    int max_start_index = max(0, (int)SETTING_COUNT - MAX_VISIBLE_ITEMS);
+    if (new_window < 0) new_window = 0;
+    if (new_window > max_start_index) new_window = max_start_index;
+
+    // 仅当窗口需要变化时更新，减少抖动
+    if (new_window != display_start_index) {
+        display_start_index = new_window;
+        Serial.printf("[SETTINGS] smooth scroll: display_start_index=%d (selected=%d)\n", display_start_index, selected_item);
     }
 
-    // 确保显示窗口不超出范围
-    if (display_start_index < 0) {
-        display_start_index = 0;
-    } else if (display_start_index > (int)SETTING_COUNT - MAX_VISIBLE_ITEMS) {
-        display_start_index = max(0, (int)SETTING_COUNT - MAX_VISIBLE_ITEMS);
-    }
+    // 最终验证
+    bool selected_visible = (selected_item >= display_start_index && selected_item < display_start_index + MAX_VISIBLE_ITEMS);
+    Serial.printf("[SETTINGS] window post: window=%d, max=%d, visible=[%d,%d), selected_visible=%s\n",
+                  display_start_index, max_start_index, display_start_index, display_start_index + MAX_VISIBLE_ITEMS,
+                  selected_visible ? "YES" : "NO");
 }
 
 void SettingsViewV3::toggleEditMode() {
-    if (selected_item == SETTING_BACK || selected_item == SETTING_RESET_DATA) {
+    if (selected_item == SETTING_BACK) {
         return; // 这些项目不能编辑
     }
 
@@ -731,12 +853,24 @@ void SettingsViewV3::adjustValue(int direction) {
             }
             break;
 
+        case SETTING_TARGET_JUMPS:
+            config.base_target_jumps += direction * 5;
+            if (config.base_target_jumps < 5) config.base_target_jumps = 5;
+            if (config.base_target_jumps > 100) config.base_target_jumps = 100;
+            Serial.printf("Base target jumps: %d\n", config.base_target_jumps);
+            break;
+
+        case SETTING_TARGET_TIME:
+            config.base_target_time += direction * 15;
+            if (config.base_target_time < 15) config.base_target_time = 15;
+            if (config.base_target_time > 300) config.base_target_time = 300;
+            Serial.printf("Base target time: %d seconds\n", config.base_target_time);
+            break;
+
         case SETTING_SOUND_ENABLED:
             config.sound_enabled = !config.sound_enabled;
             Serial.printf("Sound: %s\n", config.sound_enabled ? "On" : "Off");
             break;
-
-        // 删除了目标相关设置项 - 简化版本不包含历史统计功能
     }
 }
 
@@ -809,6 +943,7 @@ void TargetTimerViewV3::loadTargetSettings() {
     if (dataManagerV3.isInitialized()) {
         target_settings = dataManagerV3.getTargetSettings();
     }
+    // 使用系统设置的“基础时长”作为默认（保持与设置页一致的语义）
     target_duration = target_settings.target_time;
 }
 

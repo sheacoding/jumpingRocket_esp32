@@ -168,6 +168,13 @@ namespace V3Config {
     bool validateConfigs();
     const char* getConfigVersion();
     const char* getConfigUpdateTime();
+    
+    // 基于用户基准设置和难度的函数
+    uint32_t getTargetJumpsForDifficulty(game_difficulty_t difficulty);
+    uint32_t getTargetTimeForDifficulty(game_difficulty_t difficulty);
+    uint32_t getFuelThresholdForDifficulty(game_difficulty_t difficulty);
+    bool isTargetAchievedForDifficulty(game_difficulty_t difficulty, uint32_t jumps, uint32_t time_seconds);
+    float calculateTargetProgressForDifficulty(game_difficulty_t difficulty, uint32_t jumps, uint32_t time_seconds);
 }
 
 #endif // BOARD_CONFIG_V3_H

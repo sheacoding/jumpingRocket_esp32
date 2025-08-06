@@ -1,4 +1,8 @@
 #include "v3/board_config_v3.h"
+#include "v3/data_manager_v3.h"
+
+// 引用全局DataManager实例
+extern DataManagerV3 dataManagerV3;
 
 // V3Config 静态成员实现
 
@@ -256,4 +260,66 @@ const char* V3Config::getConfigVersion() {
 // 获取配置更新时间
 const char* V3Config::getConfigUpdateTime() {
     return __DATE__ " " __TIME__;
+}
+
+// 基于用户基准设置和难度倍数计算实际目标值
+uint32_t V3Config::getTargetJumpsForDifficulty(game_difficulty_t difficulty) {
+    uint32_t base_jumps = 20; // 默认基准值
+    
+    // 尝试从全局DataManager获取配置
+    if (dataManagerV3.isInitialized()) {
+        base_jumps = dataManagerV3.getSystemConfig().base_target_jumps;
+    }
+    
+    // 根据难度倍数计算实际目标
+    const difficulty_config_t* config = getDifficultyConfig(difficulty);
+    return (uint32_t)(base_jumps * config->multiplier);
+}
+
+uint32_t V3Config::getTargetTimeForDifficulty(game_difficulty_t difficulty) {
+    uint32_t base_time = 60; // 默认基准值
+    
+    // 尝试从全局DataManager获取配置
+    if (dataManagerV3.isInitialized()) {
+        base_time = dataManagerV3.getSystemConfig().base_target_time;
+    }
+    
+    // 根据难度倍数计算实际目标
+    const difficulty_config_t* config = getDifficultyConfig(difficulty);
+    return (uint32_t)(base_time * config->multiplier);
+}
+
+uint32_t V3Config::getFuelThresholdForDifficulty(game_difficulty_t difficulty) {
+    // 燃料阈值使用hardcoded的难度配置，不基于用户设置
+    // 简单：60%，普通：80%，困难：100%
+    const difficulty_config_t* config = getDifficultyConfig(difficulty);
+    return config->fuel_threshold;
+}
+
+// 检查是否达成基于难度的目标
+bool V3Config::isTargetAchievedForDifficulty(game_difficulty_t difficulty, uint32_t jumps, uint32_t time_seconds) {
+    uint32_t target_jumps = getTargetJumpsForDifficulty(difficulty);
+    uint32_t target_time = getTargetTimeForDifficulty(difficulty);
+    
+    // 需要同时满足跳跃次数和时间要求
+    return (jumps >= target_jumps && time_seconds >= target_time);
+}
+
+// 计算基于难度的目标进度
+float V3Config::calculateTargetProgressForDifficulty(game_difficulty_t difficulty, uint32_t jumps, uint32_t time_seconds) {
+    uint32_t target_jumps = getTargetJumpsForDifficulty(difficulty);
+    uint32_t target_time = getTargetTimeForDifficulty(difficulty);
+    
+    // 计算跳跃进度和时间进度
+    float jump_progress = (float)jumps / target_jumps;
+    float time_progress = (float)time_seconds / target_time;
+    
+    // 取较小值作为整体进度
+    float progress = (jump_progress < time_progress) ? jump_progress : time_progress;
+    
+    // 限制在0-1范围内
+    if (progress > 1.0f) progress = 1.0f;
+    if (progress < 0.0f) progress = 0.0f;
+    
+    return progress;
 }

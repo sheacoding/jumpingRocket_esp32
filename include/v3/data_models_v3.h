@@ -114,6 +114,10 @@ struct SystemConfigV3 {
     bool sound_enabled;         // 声音开关
     bool vibration_enabled;     // 震动开关 (预留)
     String language;            // 语言设置 (预留)
+    
+    // 用户自定义基准难度配置（对应普通难度基准）
+    uint32_t base_target_jumps;     // 基准目标跳跃次数（普通难度基准）
+    uint32_t base_target_time;      // 基准目标时间(秒)（普通难度基准）
 
     // 构造函数
     SystemConfigV3() :
@@ -124,7 +128,9 @@ struct SystemConfigV3 {
         auto_sleep(false),
         sound_enabled(true),
         vibration_enabled(false),
-        language("en-US") {}
+        language("en-US"),
+        base_target_jumps(20),
+        base_target_time(60) {}
     
     // 序列化到JSON
     String toJsonString() const;

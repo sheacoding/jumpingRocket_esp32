@@ -5,6 +5,7 @@
 #include "v3/game_integration_v3.h"
 #include "v3/data_manager_v3.h"
 #include "v3/data_models_v3.h"
+#include "v3/board_config_v3.h"
 #endif
 
 // 全局游戏状态和数据
@@ -415,6 +416,10 @@ void difficulty_select_confirm(void) {
 
 // 获取难度对应的燃料阈值
 uint32_t get_difficulty_fuel_threshold(game_difficulty_t difficulty) {
+#ifdef JUMPING_ROCKET_V3
+    // V3系统使用基于难度的燃料阈值计算
+    return V3Config::getFuelThresholdForDifficulty(difficulty);
+#else
     switch (difficulty) {
         case DIFFICULTY_EASY:
             return 60;  // 简单模式：60%燃料触发
@@ -425,6 +430,7 @@ uint32_t get_difficulty_fuel_threshold(game_difficulty_t difficulty) {
         default:
             return 80;  // 默认普通模式
     }
+#endif
 }
 
 // 获取难度名称
@@ -499,15 +505,17 @@ void game_target_monitor_check(void) {
 
     // 从V3系统获取目标设置
 #ifdef JUMPING_ROCKET_V3
+    // V3系统启用时使用基于当前游戏难度的目标设置
+    uint32_t target_jumps = V3Config::getTargetJumpsForDifficulty(game_data.difficulty);
+    uint32_t target_time = V3Config::getTargetTimeForDifficulty(game_data.difficulty);
+    
+    // 卡路里目标保持从TargetSettings获取，或使用默认值
+    float target_calories = 30.0f;
     extern DataManagerV3 dataManagerV3;
-    if (!dataManagerV3.isInitialized()) {
-        return;
+    if (dataManagerV3.isInitialized()) {
+        const TargetSettingsV3& target_settings = dataManagerV3.getTargetSettings();
+        target_calories = target_settings.target_calories;
     }
-
-    const TargetSettingsV3& target_settings = dataManagerV3.getTargetSettings();
-    uint32_t target_jumps = target_settings.target_jumps;
-    uint32_t target_time = target_settings.target_time;
-    float target_calories = target_settings.target_calories;
 #else
     // V3系统未启用时使用默认目标值
     uint32_t target_jumps = 50;      // 目标跳跃次数

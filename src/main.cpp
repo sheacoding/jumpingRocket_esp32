@@ -1,12 +1,10 @@
 #include "jumping_rocket_simple.h"
+#include <HardwareSerial.h>
 
-// V3.0 功能集成
 #ifdef JUMPING_ROCKET_V3
 #include "v3/board_config_v3.h"
 #include "v3/game_integration_v3.h"
 #include "v3/ui_views_v3.h"
-
-// V3.0 外部函数声明
 extern bool initializeV3System();
 extern void loopV3();
 extern void testV3System();
@@ -14,14 +12,12 @@ extern void printV3SystemInfo();
 extern void shutdownV3System();
 #endif
 
-// 任务句柄
 TaskHandle_t sensor_task_handle = NULL;
 TaskHandle_t display_task_handle = NULL;
 TaskHandle_t sound_task_handle = NULL;
 TaskHandle_t button_task_handle = NULL;
 TaskHandle_t game_task_handle = NULL;
 
-// 外部函数声明
 extern "C" {
     void handle_button_event(button_event_t event);
     void data_processor_init(void);
@@ -29,12 +25,12 @@ extern "C" {
     void update_game_statistics(void);
 }
 
+// 为彻底避免 HWCDC 重载问题：统一只使用单参 begin，并去掉任何多参 begin 调用
+// 注意：此前多参 begin 来源于条件编译块，某些工具链会错误解析导致仍尝试多参重载
 void setup() {
-    #ifdef UART_RX_PIN
-    Serial.begin(115200, SERIAL_8N1, UART_RX_PIN, UART_TX_PIN);
-    #else
     Serial.begin(115200);
-    #endif
+    uint32_t __t0 = millis();
+    while (!Serial && (millis() - __t0 < 1500)) { /* wait up to 1.5s */ }
     
     delay(2000); // 等待串口稳定
     Serial.println("\n\n========================================");
